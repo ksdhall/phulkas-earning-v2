@@ -1,6 +1,6 @@
 // src/app/[locale]/api/bills/route.ts
 import { NextResponse, NextRequest } from 'next/server';
-// Change to named import assuming 'prisma' is exported as const
+// Assuming 'prisma' is a named export from '@/lib/prisma'
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/utils/auth';
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
      const numberOfPeopleWorkingDinner = body.numberOfPeopleWorkingDinner ?? 1; // Default to 1 if not provided, ensure it's a number
 
      // Validate numberOfPeopleWorkingDinner if mealType is DINNER
-     if (mealType === 'DINNER' && typeof numberOfPeopleWorkingDinner !== 'number' || numberOfPeopleWorkingDinner <= 0) {
+     if (mealType === 'DINNER' && (typeof numberOfPeopleWorkingDinner !== 'number' || numberOfPeopleWorkingDinner <= 0)) {
           // If mealType is DINNER, numberOfPeopleWorkingDinner must be a positive number
           return NextResponse.json({ error: 'Invalid number of people working for dinner' }, { status: 400 });
      }
@@ -52,7 +52,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating bill:', error);
-    // More specific error handling can be added here
     return NextResponse.json({ error: 'Failed to create bill' }, { status: 500 });
   }
 }

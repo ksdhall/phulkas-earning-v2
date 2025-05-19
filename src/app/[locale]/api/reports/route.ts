@@ -1,6 +1,6 @@
 // src/app/[locale]/api/reports/route.ts
 import { NextResponse, NextRequest } from 'next/server';
-// Change to named import assuming 'prisma' is exported as const
+// Assuming 'prisma' is a named export from '@/lib/prisma'
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/utils/auth';
 
