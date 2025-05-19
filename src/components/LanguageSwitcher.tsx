@@ -1,67 +1,57 @@
-// src/components/LanguageSwitcher.tsx
 "use client";
 
-import { useLocale, useTranslations } from 'next-intl';
-import { useRouter, usePathname } from 'next/navigation';
-import { ChangeEvent } from 'react';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import InputLabel from '@mui/material/InputLabel';
-import { styled } from '@mui/material/styles';
+import React from 'react';
+import { Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material';
+import { useTranslations } from 'next-intl';
+// Import hooks for routing and locale from next/navigation
+import { useParams, useRouter, usePathname } from 'next/navigation';
+// Import locales from your routing file
+import { routing } from '@/i18n/routing';
 
-const locales = ['en', 'ja'];
+// Remove the props interface as locale and handler will be internal
+// interface LanguageSwitcherProps {
+//   onLocaleChange: (event: SelectChangeEvent<string>) => void;
+//   locale: string;
+// }
 
-const StyledSelect = styled(Select)(({ theme }) => ({
-  color: theme.palette.common.white,
-  '& .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  '&:hover .MuiOutlinedInput-notchedOutline': {
-    borderColor: theme.palette.common.white,
-  },
-  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-    borderColor: theme.palette.common.white,
-  },
-  '& .MuiSvgIcon-root': {
-    color: theme.palette.common.white,
-  },
-  '& .MuiSelect-select': {
-      color: theme.palette.common.white,
-  }
-}));
-
-
-const LanguageSwitcher = () => {
-  const locale = useLocale();
-  const t = useTranslations('localeSwitcher');
+// Component no longer accepts props
+const LanguageSwitcher: React.FC = () => {
+  const t = useTranslations('language_switcher');
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname(); // Get the current pathname
+  const params = useParams(); // Get route params, including locale
 
-  const onLocaleChange = (event: ChangeEvent<{ value: unknown }>) => {
-    const nextLocale = event.target.value as string;
-    const newPathname = pathname.replace(`/${locale}`, `/${nextLocale}`);
-    router.push(newPathname);
+  // Get the current locale from the params
+  const currentLocale = params.locale as string;
+
+  // Access the locales array from the imported routing object
+  const locales = routing.locales;
+
+  // Handle locale change internally
+  const handleLocaleChange = (event: SelectChangeEvent<string>) => {
+    const newLocale = event.target.value;
+    // Construct the new URL with the selected locale
+    // This logic might need refinement based on your specific routing setup
+    const newPath = `/${newLocale}${pathname.startsWith(`/${currentLocale}`) ? pathname.substring(currentLocale.length + 1) : pathname}`;
+    router.push(newPath);
   };
 
   return (
-    <FormControl sx={{ m: 1, minWidth: 120 }} size="small">
-      <InputLabel id="locale-switcher-label"
-         sx={{ color: 'white' }}
-      >{t('label')}</InputLabel>
-      <StyledSelect
-        labelId="locale-switcher-label"
-        id="locale-switcher"
-        value={locale}
+    <FormControl size="small" sx={{ minWidth: 120 }}>
+      <InputLabel id="language-switcher-label">{t('label')}</InputLabel>
+      <Select
+        labelId="language-switcher-label"
+        id="language-switcher"
+        value={currentLocale} // Use the current locale from params
         label={t('label')}
-        onChange={onLocaleChange}
+        onChange={handleLocaleChange} // Use the internal handler
       >
         {locales.map((loc) => (
           <MenuItem key={loc} value={loc}>
-            {t(`locale_${loc}` as any)}
+            {t(loc)}
           </MenuItem>
         ))}
-      </StyledSelect>
+      </Select>
     </FormControl>
   );
 };

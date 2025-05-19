@@ -26,7 +26,6 @@ import { format, addDays, subDays } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
 import { Bill } from '@/types/Bill';
-// Import calculation functions from the library
 import { calculateDailyEarnings } from '@/lib/calculations';
 
 
@@ -81,11 +80,18 @@ export default function DashboardPage() {
        }
       const data = await res.json();
        console.log("Dashboard Page: Fetched bills data:", data);
+      // Assuming the API returns mealType as string ('lunch'/'dinner') or Prisma Enum
+      // Convert date strings to Date objects for easier processing if needed
+       // FIX: Ensure mealType is lowercase string, isOurFood is boolean, numberOfPeopleWorkingDinner is number
+       // API reports route now returns processed bills, so this mapping might be redundant but safe to keep
       const processedBills: Bill[] = data.bills.map((bill: any) => ({
           ...bill,
           date: new Date(bill.date),
+           // Ensure mealType is lowercase string for consistency if needed
           mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
+           // Ensure isOurFood is boolean, default to true if null/undefined from db
           isOurFood: bill.isOurFood ?? true,
+           // Ensure numberOfPeopleWorkingDinner is number, default to 1 if null/undefined from db
           numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
       }));
       setBillsForDate(processedBills);
@@ -146,7 +152,7 @@ export default function DashboardPage() {
 
        console.log("Dashboard Page: Bill added successfully.");
       handleCloseModal();
-      fetchBillsForDate(currentDate);
+      fetchBillsForDate(currentDate); // Refresh the list
 
     } catch (err: any) {
       console.error("Dashboard Page: Error adding bill:", err);
@@ -170,14 +176,14 @@ export default function DashboardPage() {
    const handleCloseConfirmDelete = () => {
         console.log("Dashboard Page: Closing delete confirm.");
        setOpenConfirmDelete(false);
-       setBillToDeleteId(null);
+       setBillToDeleteId(null); // Clear the ID when closing
    };
 
    const handleDeleteBill = async () => {
-        if (billToDeleteId === null) return;
+        if (billToDeleteId === null) return; // Should not happen if dialog is managed correctly
 
          console.log("Dashboard Page: Deleting bill with ID:", billToDeleteId);
-        setOpenConfirmDelete(false);
+        setOpenConfirmDelete(false); // Close dialog immediately
         setIsDeleting(true);
         setError(null);
 
@@ -193,8 +199,8 @@ export default function DashboardPage() {
             }
 
              console.log("Dashboard Page: Bill deleted successfully.");
-             setBillToDeleteId(null);
-             fetchBillsForDate(currentDate);
+             setBillToDeleteId(null); // Clear the ID after successful deletion
+             fetchBillsForDate(currentDate); // Refresh the list
 
         } catch (err: any) {
              console.error("Dashboard Page: Error during delete fetch:", err);
@@ -297,7 +303,8 @@ export default function DashboardPage() {
                        <DialogTitle id="alert-dialog-title">{tGeneral('edit.delete_confirm_title')}</DialogTitle>
                        <DialogContent>
                        <DialogContentText id="alert-dialog-description">
-                          {tGeneral('edit.delete_confirm_message', { id: billToDeleteId })}
+                          {/* Fix: Provide a fallback value for billToDeleteId if it's null */}
+                          {tGeneral('edit.delete_confirm_message', { id: billToDeleteId ?? '' })}
                        </DialogContentText>
                        </DialogContent>
                        <DialogActions>

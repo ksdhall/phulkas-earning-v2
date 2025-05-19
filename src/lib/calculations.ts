@@ -7,8 +7,8 @@ import { Bill } from '@/types/Bill'; // Assuming Bill interface is here
 // Import MealType Enum directly from Prisma client
 import { MealType } from '@prisma/client';
 
-// Assuming the structure of the daily summary
-interface DailyEarningsSummary {
+// --- Export the DailyEarningsSummary interface ---
+export interface DailyEarningsSummary {
   lunch: {
     foodTotal: number;
     drinkTotal: number;
@@ -49,7 +49,8 @@ interface DailyEarningsSummary {
 }
 
 // --- Updated structure of the range summary ---
-interface RangeSummary {
+// Export the RangeSummary interface as well if it's used elsewhere
+export interface RangeSummary {
     totalFood: number; // Overall total food for the range
     totalDrinks: number; // Overall total drinks for the range
     // --- Breakdown by meal type for the range ---

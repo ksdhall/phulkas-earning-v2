@@ -4,7 +4,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import DateRangeFilter from '@/components/DateRangeFilter';
+// Import DateRangeFilter and its props type
+import DateRangeFilter, { DateRangeFilterProps } from '@/components/DateRangeFilter';
 import BillList from '@/components/BillList';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -28,51 +29,12 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 
 
-import { format, parseISO, eachDayOfInterval } from 'date-fns';
+import { format, parseISO, eachDayOfInterval, isValid } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
 import { Bill } from '@/types/Bill';
-import { calculateDailyEarnings, calculateRangeSummary } from '@/lib/calculations';
+import { calculateDailyEarnings, calculateRangeSummary, DailyEarningsSummary } from '@/lib/calculations';
 
-
-interface DailyEarningsSummary {
-  lunch: {
-    foodTotal: number;
-    drinkTotal: number;
-    foodEarnings: number;
-    drinkEarnings: number;
-    totalEarnings: number;
-    foodBreakdown: {
-      base: number;
-      overage: number;
-      overageHalf: number;
-    };
-    drinkBreakdown: {
-        total: number;
-        share: number;
-    };
-  };
-  dinner: {
-    foodTotal: number;
-    drinkTotal: number;
-    foodEarnings: number;
-    drinkEarnings: number;
-    totalEarnings: number;
-     foodBreakdown: {
-        totalDinnerFood: number;
-        ourDinnerFoodSales: number;
-        ourFoodSalesShare: number;
-        totalFoodShiftSharePool: number;
-        ourShiftShare: number;
-        numberOfPeopleWorking: number;
-     };
-    drinkBreakdown: {
-        total: number;
-        share: number;
-      };
-  };
-  dayTotalEarnings: number;
-}
 
 interface RangeSummary {
     totalFood: number;
@@ -95,7 +57,7 @@ interface RangeReportData {
 
 interface DailySummaryRow {
     date: string;
-    summary: DailySummary;
+    summary: DailyEarningsSummary;
 }
 
 
@@ -106,6 +68,7 @@ export default function SummaryPage() {
   const locale = params.locale as string;
 
   const today = format(new Date(), 'yyyy-MM-dd');
+  // Use state for fromDate and toDate to be passed to DateRangeFilter
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
 
@@ -116,11 +79,14 @@ export default function SummaryPage() {
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
   const [billToDeleteId, setBillToDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+   const [dateFilterError, setDateFilterError] = useState<string | null>(null); // State for date filter validation error
+
 
   const t = useTranslations('summary');
   const tGeneral = useTranslations();
   const tDashboard = useTranslations('dashboard');
   const tsEarnings = useTranslations('earnings_details');
+  const tDateFilter = useTranslations('date_range_filter'); // Translations for date filter
 
 
   useEffect(() => {
@@ -130,6 +96,7 @@ export default function SummaryPage() {
     }
   }, [status, router, locale]);
 
+  // Fetch data based on current fromDate and toDate state
   const fetchRangeData = useCallback(async (start: string, end: string) => {
      if (status !== 'authenticated') {
          console.log("Summary Page: Not authenticated, skipping fetch.");
@@ -173,18 +140,36 @@ export default function SummaryPage() {
   }, [status, locale, tGeneral]);
 
 
+  // Fetch initial data when authenticated
   useEffect(() => {
      if (status === 'authenticated') {
-         console.log("Summary Page: Status authenticated, triggering fetch.");
-         fetchRangeData(fromDate, toDate);
+         console.log("Summary Page: Status authenticated, triggering initial fetch.");
+         fetchRangeData(fromDate, toDate); // Use initial state values
      }
-  }, [status, locale, fromDate, toDate, fetchRangeData]);
+  }, [status, locale, fetchRangeData]); // Depend only on status, locale, and fetchRangeData itself
 
-  const handleApplyFilter = (start: string, end: string) => {
-       console.log(`Summary Page: Applying filter from ${start} to ${end}`);
-      setFromDate(start);
-      setToDate(end);
+
+  // Function to handle applying the filter (called by the button)
+  const handleApplyFilter = () => {
+      const from = parseISO(fromDate);
+      const to = parseISO(toDate);
+
+      // Add validation before applying filter
+      if (!isValid(from) || !isValid(to)) {
+          setDateFilterError(tDateFilter('invalid_date_range'));
+          return;
+      }
+
+      if (from > to) {
+          setDateFilterError(tDateFilter('from_date_after_to_date'));
+          return;
+      }
+
+      setDateFilterError(null); // Clear previous errors
+      console.log(`Summary Page: Applying filter from ${fromDate} to ${toDate}`);
+      fetchRangeData(fromDate, toDate); // Fetch data with current state values
   };
+
 
    const handleEditBill = (id: number) => {
      console.log("Summary Page: Editing bill with ID:", id);
@@ -225,6 +210,7 @@ export default function SummaryPage() {
              console.log("Summary Page: Bill deleted successfully.");
              setBillToDeleteId(null);
 
+             // Re-fetch data for the current range after deletion
             if (currentRange) {
                 fetchRangeData(currentRange.from, currentRange.to);
             } else {
@@ -284,7 +270,6 @@ export default function SummaryPage() {
    }, [rangeData?.bills, fromDate, toDate]);
 
 
-    // Use return statements directly within the conditional blocks
     if (status === 'loading') {
         return (
             <Layout>
@@ -295,9 +280,8 @@ export default function SummaryPage() {
         );
     } else if (status === 'authenticated') {
         const bills = rangeData?.bills || [];
-        const summary = rangeData?.summary;
+        const summary = rangeData?.summary; // summary can be undefined
 
-        // Return Layout with content directly inside
         return (
             <Layout>
                <Typography variant="h4" gutterBottom>
@@ -307,12 +291,29 @@ export default function SummaryPage() {
                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                 {isDeleting && <Alert severity="info" sx={{ mb: 2 }}>{tGeneral('edit.deleting')}</Alert>}
 
-               {/* DateRangeFilter now uses useTranslations internally */}
+               {/* Use the updated DateRangeFilter API */}
                <DateRangeFilter
-                  onApplyFilter={handleApplyFilter}
-                  initialFromDate={fromDate}
-                  initialToDate={toDate}
+                  fromDate={fromDate} // Pass state down
+                  toDate={toDate} // Pass state down
+                  onFromDateChange={setFromDate} // Pass state setter up
+                  onToDateChange={setToDate} // Pass state setter up
                />
+                {/* Add an Apply Filter button */}
+                <Box sx={{ mt: 2, mb: 3 }}>
+                    <Button
+                        variant="contained"
+                        onClick={handleApplyFilter}
+                        disabled={loading || isDeleting} // Disable while loading or deleting
+                    >
+                        {tDateFilter('apply_filter')} {/* Use translation */}
+                    </Button>
+                     {dateFilterError && (
+                         <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                             {dateFilterError} {/* Display date filter validation error */}
+                         </Typography>
+                      )}
+                </Box>
+
 
                {loading && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
@@ -327,33 +328,38 @@ export default function SummaryPage() {
                              {t('summary_for_range', { fromDate: currentRange.from, toDate: currentRange.to })}
                          </Typography>
                           <Grid container spacing={2}>
-                              <Grid item xs={12} sm={6}>
+                              {/* Using size prop with responsive object - trying to bypass type error */}
+                              <Grid size={{ xs: 12, sm: 6 }}>
                                   <Typography variant="body1">
-                                      {t('total_food', { amount: summary.totalFood.toFixed(2) })}
-                                       {summary.totalLunchFood !== undefined && summary.totalDinnerFood !== undefined && (
-                                           <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                                               (Lunch: {summary.totalLunchFood.toFixed(2)}, Dinner: {summary.totalDinnerFood.toFixed(2)})
-                                           </Typography>
-                                       )}
-                                  </Typography>
-                                 <Typography variant="body1">
-                                     {t('total_drinks', { amount: summary.totalDrinks.toFixed(2) })}
-                                      {summary.totalLunchDrinks !== undefined && summary.totalDinnerDrinks !== undefined && (
-                                           <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                                               (Lunch: {summary.totalLunchDrinks.toFixed(2)}, Dinner: {summary.totalDinnerDrinks.toFixed(2)})
-                                           </Typography>
-                                       )}
-                                 </Typography>
-                             </Grid>
-                              <Grid item xs={12} sm={6}>
-                                  <Typography variant="h6" color="primary">
-                                      {t('phulkas_total_earnings', { amount: summary.totalPhulkasEarnings !== undefined ? summary.totalPhulkasEarnings.toFixed(2) : 'N/A' })}
-                                  </Typography>
+                                      {/* Use optional chaining for summary access */}
+                                      {t('total_food', { amount: summary?.totalFood?.toFixed(2) ?? 'N/A' })}
+                                           {summary?.totalLunchFood !== undefined && summary?.totalDinnerFood !== undefined && (
+                                               <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                                   (Lunch: {summary?.totalLunchFood?.toFixed(2) ?? 'N/A'}, Dinner: {summary?.totalDinnerFood?.toFixed(2) ?? 'N/A'})
+                                               </Typography>
+                                           )}
+                                      </Typography>
+                                     <Typography variant="body1">
+                                          {/* Use optional chaining for summary access */}
+                                         {t('total_drinks', { amount: summary?.totalDrinks?.toFixed(2) ?? 'N/A' })}
+                                          {summary?.totalLunchDrinks !== undefined && summary?.totalDinnerDrinks !== undefined && (
+                                               <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                                   (Lunch: {summary?.totalLunchDrinks?.toFixed(2) ?? 'N/A'}, Dinner: {summary?.totalDinnerDrinks?.toFixed(2) ?? 'N/A'})
+                                               </Typography>
+                                           )}
+                                     </Typography>
+                                  </Grid>
+                                  {/* Using size prop with responsive object - trying to bypass type error */}
+                                  <Grid size={{ xs: 12, sm: 6 }}>
+                                      <Typography variant="h6" color="primary">
+                                           {/* Use optional chaining for summary access */}
+                                          {t('phulkas_total_earnings', { amount: summary?.totalPhulkasEarnings !== undefined ? summary.totalPhulkasEarnings.toFixed(2) : 'N/A' })}
+                                      </Typography>
+                                  </Grid>
                               </Grid>
-                          </Grid>
-                     </CardContent>
-                  </Card>
-               )}
+                         </CardContent>
+                      </Card>
+                   )}
 
                      {dailySummaries.length > 0 ? (
                           <TableContainer component={Paper} sx={{ mt: 3, mb: 3 }}>
@@ -371,6 +377,7 @@ export default function SummaryPage() {
                                           <TableRow key={dailyReport.date}>
                                               <TableCell sx={{ verticalAlign: 'top' }}>{dailyReport.date}</TableCell>
                                               <TableCell sx={{ verticalAlign: 'top' }}>
+                                                  {/* Access dailyReport.summary directly as it's typed in DailySummaryRow */}
                                                   {dailyReport.summary.lunch.foodTotal > 0 || dailyReport.summary.lunch.drinkTotal > 0 ? (
                                                       <Box sx={{ fontSize: '0.8rem' }}>
                                                           <Typography variant="caption" display="block">{tDashboard('food_total', { amount: dailyReport.summary.lunch.foodTotal.toFixed(2) })}</Typography>
@@ -486,15 +493,16 @@ export default function SummaryPage() {
                      <DialogTitle id="alert-dialog-title">{tGeneral('edit.delete_confirm_title')}</DialogTitle>
                      <DialogContent>
                      <DialogContentText id="alert-dialog-description">
-                        {tGeneral('edit.delete_confirm_message', { id: billToDeleteId })}
-                     </DialogContentText>
-                     </DialogContent>
-                     <DialogActions>
-                         <Button onClick={handleCloseConfirmDelete} disabled={isDeleting}>{tGeneral('edit.cancel')}</Button>
-                         <Button onClick={handleDeleteBill} color="error" autoFocus disabled={isDeleting}>
-                             {isDeleting ? <CircularProgress size={24} /> : tGeneral('edit.delete')}
-                         </Button>
-                     </DialogActions>
+                          {/* Fix: Provide a fallback value for billToDeleteId if it's null */}
+                          {tGeneral('edit.delete_confirm_message', { id: billToDeleteId ?? '' })}
+                       </DialogContentText>
+                       </DialogContent>
+                       <DialogActions>
+                           <Button onClick={handleCloseConfirmDelete} disabled={isDeleting}>{tGeneral('edit.cancel')}</Button>
+                           <Button onClick={handleDeleteBill} color="error" autoFocus disabled={isDeleting}>
+                               {isDeleting ? <CircularProgress size={24} /> : tGeneral('edit.delete')}
+                           </Button>
+                       </DialogActions>
                  </Dialog>
 
             </Layout>

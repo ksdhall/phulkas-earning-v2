@@ -1,11 +1,10 @@
-// src/app/[locale]/edit/[id]/page.tsx
 "use client";
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import BillForm from '@/components/BillForm';
+import BillForm, { BillFormData } from '@/components/BillForm'; // Import BillFormData
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -17,91 +16,87 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 
-import { useTranslations } from 'next-intl';
 
-// Import the updated Bill interface
-import { Bill } from '@/types/Bill';
+import { useTranslations } from 'next-intl';
+import { format } from 'date-fns'; // Import format for date formatting
+
+import { Bill } from '@/types/Bill'; // Assuming Bill interface is here
 
 
 export default function EditBillPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const locale = params.locale as string; // Ensure locale is a string
-  const billId = params.id as string; // Get the bill ID from the URL params
+  const locale = params.locale as string;
+  const billId = params.id as string; // Get the bill ID from dynamic route params
 
   const [billData, setBillData] = useState<Bill | null>(null);
-  const [loading, setLoading] = useState(true); // Start loading immediately
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false); // State for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const t = useTranslations('edit'); // Translations for the edit page
-   const tGeneral = useTranslations(); // General translations for errors, etc.
-   const tDashboard = useTranslations('dashboard'); // For adding bill back button
+
+  const t = useTranslations('edit');
+  const tGeneral = useTranslations();
+
+
+  // Function to fetch the specific bill data
+  const fetchBillData = useCallback(async () => {
+     if (status !== 'authenticated') {
+        console.log("Edit Page: Not authenticated, skipping fetch.");
+        return;
+     }
+
+    setLoading(true);
+    setError(null);
+    setBillData(null);
+
+     console.log(`Edit Page: Fetching bill with ID: ${billId}`);
+
+    try {
+      const res = await fetch(`/${locale}/api/bills/${billId}`);
+       if (!res.ok) {
+           const err = await res.json();
+            console.error("Edit Page: API Error fetching bill:", err);
+           throw new Error(err.error || tGeneral('errors.failed_fetch'));
+       }
+      const data: Bill = await res.json(); // Assuming API returns Bill type
+       console.log("Edit Page: Fetched bill data:", data);
+      setBillData(data);
+
+    } catch (err: any) {
+      console.error("Edit Page: Error fetching bill:", billId, err);
+      setError(err.message || tGeneral('errors.failed_fetch'));
+    } finally {
+      setLoading(false);
+    }
+  }, [status, locale, billId, tGeneral]);
 
 
   // Effect to redirect to login if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
+      console.log("Edit Page: User unauthenticated, redirecting to login.");
       router.push(`/${locale}`);
     }
   }, [status, router, locale]);
 
-  // Effect to fetch the bill data when the component mounts or billId/locale changes
+  // Effect to fetch bill data on initial load and when authentication status or locale changes
   useEffect(() => {
-    const fetchBill = async () => {
-      if (status !== 'authenticated' || !billId) {
-           setLoading(false); // Stop loading if not authenticated or no ID
-           setError(t('bill_not_found')); // Indicate bill not found if no ID
-           return;
-      }
-
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/${locale}/api/bills/${billId}`);
-
-        if (!res.ok) {
-          const err = await res.json();
-           // Use specific error message from API if available, fallback to translation
-          throw new Error(err.error || tGeneral('errors.failed_fetch'));
-        }
-
-        const data: Bill = await res.json();
-         // Process fetched data to ensure correct types for form state
-         // mealType from DB will be Enum ('LUNCH'/'DINNER'), form expects string ('lunch'/'dinner')
-         // date from DB will be Date object, form expects 'yyyy-MM-dd' string
-         // isOurFood and numberOfPeopleWorkingDinner might be null from DB, form expects boolean/number with defaults
-        const processedData: Bill = {
-            ...data,
-            date: data.date instanceof Date ? data.date : new Date(data.date), // Ensure date is Date object
-            mealType: data.mealType.toString().toLowerCase() as 'lunch' | 'dinner', // Map Enum to string
-            isOurFood: data.isOurFood ?? true, // Default to true if null/undefined
-            numberOfPeopleWorkingDinner: data.numberOfPeopleWorkingDinner ?? 1, // Default to 1 if null/undefined
-        };
-        setBillData(processedData);
-
-      } catch (err: any) {
-         console.error("Error fetching bill:", err);
-         // Use translation for error message
-         setError(err.message || t('bill_not_found')); // Use bill not found translation as fallback
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBill();
-  }, [billId, locale, status]); // Dependencies: billId, locale, status
+    if (status === 'authenticated' && billId) {
+       console.log("Edit Page: Status authenticated and billId available, triggering fetch.");
+      fetchBillData();
+    }
+  }, [status, locale, billId, fetchBillData]);
 
 
-  // Handler for form submission (Update Bill)
-  const handleFormSubmit = async (formData: Omit<Bill, 'id'>) => {
-      if (!billId) return; // Cannot submit if no bill ID
-
+  const handleFormSubmit = async (formData: BillFormData) => {
+     console.log("Edit Page: Submitting updated bill:", formData);
     setIsSubmitting(true);
     setError(null);
+
     try {
       const res = await fetch(`/${locale}/api/bills/${billId}`, {
         method: 'PUT',
@@ -112,38 +107,35 @@ export default function EditBillPage() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-         // Use specific error message from API if available, fallback to translation
-        throw new Error(err.error || t('update_bill_error', { error: '' })); // Use translation with potential error detail
+         const err = await res.json();
+          console.error("Edit Page: API Error updating bill:", err);
+         throw new Error(err.error || t('update_bill_error', { error: '' }));
       }
 
-      // If successful, navigate back to dashboard or summary
-       // Using router.back() might be simplest
-       router.back();
-       // Or redirect to dashboard: router.push(`/${locale}/dashboard`);
-
+       console.log("Edit Page: Bill updated successfully.");
+      // Redirect back to dashboard or summary page after successful update
+      router.push(`/${locale}/dashboard`); // Or /${locale}/summary
     } catch (err: any) {
-       console.error("Error updating bill:", err);
-       setError(err.message || t('update_bill_error', { error: '' })); // Use translation
+      console.error("Edit Page: Error updating bill:", err);
+      setError(err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-   // Handlers for Delete Confirmation Dialog
-   const handleOpenConfirmDelete = () => {
+    const handleOpenConfirmDelete = () => {
+        console.log("Edit Page: Opening delete confirm for bill ID:", billId);
        setOpenConfirmDelete(true);
    };
 
    const handleCloseConfirmDelete = () => {
+        console.log("Edit Page: Closing delete confirm.");
        setOpenConfirmDelete(false);
    };
 
-   // Handler for Deleting Bill
    const handleDeleteBill = async () => {
-        if (!billId) return;
-
-        setOpenConfirmDelete(false);
+        console.log("Edit Page: Deleting bill with ID:", billId);
+        setOpenConfirmDelete(false); // Close dialog immediately
         setIsDeleting(true);
         setError(null);
 
@@ -154,100 +146,114 @@ export default function EditBillPage() {
 
             if (!res.ok) {
                 const err = await res.json();
-                 // Use specific error message from API if available, fallback to translation
-                throw new Error(err.error || t('delete_bill_error', { error: '' })); // Use translation
+                 console.error("Edit Page: API Error deleting bill:", err);
+                throw new Error(err.error || t('delete_bill_error', { error: '' }));
             }
 
-             // If successful, navigate back to dashboard or summary
-             // Using router.back() might be simplest
-             router.back();
-             // Or redirect to dashboard: router.push(`/${locale}/dashboard`);
+             console.log("Edit Page: Bill deleted successfully.");
+             // Redirect back to dashboard or summary after deletion
+             router.push(`/${locale}/dashboard`); // Or /${locale}/summary
 
         } catch (err: any) {
-             console.error("Error deleting bill:", err);
-             setError(err.message || t('delete_bill_error', { error: '' })); // Use translation
+             console.error("Edit Page: Error during delete fetch:", err);
+             setError(err.message || tGeneral('errors.failed_fetch'));
         } finally {
             setIsDeleting(false);
         }
    };
 
 
-  // Render loading state while fetching bill data
-  if (loading || status === 'loading') {
+    // --- Conditional Rendering ---
+
+    if (status === 'loading' || loading) {
+        return (
+            <Layout>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+                    <CircularProgress />
+                </Box>
+            </Layout>
+        );
+    }
+
+    if (error) {
+        return (
+             <Layout>
+                 <Alert severity="error">{error}</Alert>
+                 <Button onClick={() => fetchBillData()} sx={{mt: 2}}>{tGeneral('retry')}</Button>
+             </Layout>
+        );
+    }
+
+    if (!billData) {
+         return (
+             <Layout>
+                 <Alert severity="warning">{t('bill_not_found')}</Alert>
+             </Layout>
+         );
+    }
+
+    // If authenticated, not loading, no error, and billData is available
+    // Map billData to BillFormData format for the form
+    const initialFormData: BillFormData = {
+        // Ensure date is formatted to 'yyyy-MM-dd' string
+        date: billData.date instanceof Date ? format(billData.date, 'yyyy-MM-dd') : format(new Date(billData.date), 'yyyy-MM-dd'),
+        mealType: billData.mealType.toString().toLowerCase() as 'lunch' | 'dinner', // Ensure lowercase string
+        foodAmount: billData.foodAmount,
+        drinkAmount: billData.drinkAmount,
+         // Ensure isOurFood is boolean, default to true if null/undefined
+        isOurFood: billData.isOurFood ?? true,
+         // Ensure numberOfPeopleWorkingDinner is number, default to 1
+        numberOfPeopleWorkingDinner: billData.numberOfPeopleWorkingDinner ?? 1,
+    };
+
+
     return (
-      <Layout>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-          <CircularProgress />
-        </Box>
-      </Layout>
+       <Layout>
+            <Typography variant="h4" gutterBottom>
+              {t('edit_bill_title', { id: billId })}
+            </Typography>
+
+            {isDeleting && <Alert severity="info" sx={{ mb: 2 }}>{tGeneral('edit.deleting')}</Alert>}
+
+            {/* BillForm for editing */}
+            <BillForm
+              initialData={initialFormData} // Pass the mapped and formatted data
+              onSubmit={handleFormSubmit}
+              isSubmitting={isSubmitting}
+            />
+
+             <Box sx={{ mt: 3 }}>
+                 <Button
+                     variant="outlined"
+                     color="error"
+                     onClick={handleOpenConfirmDelete}
+                     disabled={isSubmitting || isDeleting}
+                 >
+                     {tGeneral('edit.delete')}
+                 </Button>
+             </Box>
+
+             <Dialog
+                 open={openConfirmDelete}
+                 onClose={handleCloseConfirmDelete}
+                 aria-labelledby="alert-dialog-title"
+                 aria-describedby="alert-dialog-description"
+             >
+                 <DialogTitle id="alert-dialog-title">{tGeneral('edit.delete_confirm_title')}</DialogTitle>
+                 <DialogContent>
+                 <DialogContentText id="alert-dialog-description">
+                     {/* Use billId directly as it's a string */}
+                     {tGeneral('edit.delete_confirm_message', { id: billId })}
+                   </DialogContentText>
+                   </DialogContent>
+                   <DialogActions>
+                       <Button onClick={handleCloseConfirmDelete} disabled={isDeleting}>{tGeneral('edit.cancel')}</Button>
+                       <Button onClick={handleDeleteBill} color="error" autoFocus disabled={isDeleting}>
+                           {isDeleting ? <CircularProgress size={24} /> : tGeneral('edit.delete')}
+                       </Button>
+                   </DialogActions>
+             </Dialog>
+
+       </Layout>
     );
   }
-
-  // Render error message if fetching failed or bill not found
-  if (error || !billData) {
-      return (
-           <Layout>
-               <Typography variant="h5" color="error" sx={{mt: 3}}>
-                  {error || t('bill_not_found')} {/* Display error or bill not found message */}
-               </Typography>
-                {/* Optional: Button to go back to dashboard */}
-               <Box sx={{mt: 2}}>
-                   <Button variant="contained" onClick={() => router.push(`/${locale}/dashboard`)}>
-                       {tDashboard('dashboard')} {/* Button to go back to Dashboard */}
-                   </Button>
-               </Box>
-           </Layout>
-      );
-  }
-
-
-  // Render the form when bill data is loaded and authenticated
-  if (status === 'authenticated' && billData) {
-    return (
-      <Layout>
-        <Typography variant="h4" gutterBottom>
-          {t('title')} {/* Use translation for page title */}
-        </Typography>
-
-        {/* BillForm for editing */}
-        <BillForm
-          initialData={billData} // Pass the fetched bill data to the form
-          onSubmit={handleFormSubmit}
-          isSubmitting={isSubmitting}
-        />
-
-         {/* Delete Bill Button */}
-         <Box sx={{mt: 3}}>
-             <Button variant="outlined" color="error" onClick={handleOpenConfirmDelete}>
-                 {t('delete_bill')} {/* Use translation */}
-             </Button>
-         </Box>
-
-
-         {/* Confirmation Dialog for Deletion */}
-            <Dialog
-                open={openConfirmDelete}
-                onClose={handleCloseConfirmDelete}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-            >
-                <DialogTitle id="alert-dialog-title">{t('delete_confirm_title')}</DialogTitle> {/* Use translation */}
-                <DialogContent>
-                <DialogContentText id="alert-dialog-description">
-                   {t('delete_confirm_message', { id: billId })} {/* Use translation with bill ID */}
-                </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseConfirmDelete} disabled={isDeleting}>{tGeneral('edit.cancel')}</Button> {/* Use general translation */}
-                    <Button onClick={handleDeleteBill} color="error" autoFocus disabled={isDeleting}>
-                        {isDeleting ? <CircularProgress size={24} /> : t('delete')} {/* Use translation */}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-      </Layout>
-    );
-  }
-
-  return null; // Should ideally not reach here if auth status is handled
-}

@@ -1,68 +1,75 @@
 // src/auth.ts
-// This file configures NextAuth.js and exports the auth helper and handlers.
-
 import NextAuth from "next-auth";
+import type { AuthOptions, SessionStrategy } from "next-auth"; // Import SessionStrategy type
 import CredentialsProvider from "next-auth/providers/credentials";
+// Removed: import { verifyPassword } from "./lib/auth"; // No longer needed for hardcoded
+// Removed: import { getUserByEmail } from "./lib/user"; // No longer needed for hardcoded
 
-// Define your authentication options
-export const authOptions = {
+// Hardcoded credentials for demonstration
+const HARDCODED_USERNAME = "test@example.com"; // Replace with your actual hardcoded username
+const HARDCODED_PASSWORD = "password"; // Replace with your actual hardcoded password
+const HARDCODED_USER_ID = "123"; // Replace with a hardcoded user ID
+
+// Define the AuthOptions configuration
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
-      async authorize(credentials, req) {
-        // This is where you would typically query your database
-        // to find a user with the provided credentials.
-        // For now, we'll use a hardcoded default user.
-        const defaultUser = { username: "mari", password: "admin123" };
-
-        console.log("Auth: authorize function called with credentials:", credentials);
-
-        if (credentials?.username === defaultUser.username && credentials?.password === defaultUser.password) {
-          // If credentials are valid, return the user object.
-          // The user object should at least have an 'id'.
-          console.log("Auth: Credentials valid, returning user");
-          return { id: "1", name: "mari", email: "mari@example.com" };
+      async authorize(credentials) {
+        console.log("Attempting to authorize with credentials:", credentials);
+        // Check provided credentials against hardcoded values
+        if (
+          credentials?.username === HARDCODED_USERNAME &&
+          credentials?.password === HARDCODED_PASSWORD
+        ) {
+          console.log("Authorization successful with hardcoded credentials.");
+          // If credentials match, return a user object
+          // This user object will be available in the session
+          return {
+            id: HARDCODED_USER_ID, // Use hardcoded ID
+            email: HARDCODED_USERNAME, // Use hardcoded username as email
+            name: "Hardcoded User", // Optional: Add a name
+            // Add any other properties you want in the session user object
+          };
         } else {
-          // If credentials are invalid, return null.
-          console.log("Auth: Invalid credentials");
-          return null;
+          console.log("Authorization failed: Invalid credentials.");
+          // If credentials do not match, return null
+          return null; // Indicate authentication failure
         }
-      }
-    })
-    // Add other providers here (e.g., GoogleProvider, GitHubProvider)
+      },
+    }),
   ],
-  // Configure pages (e.g., signIn page)
-  pages: {
-    signIn: '/', // Specify your custom sign-in page route
-    error: '/api/auth/error', // Explicitly set error page to NextAuth's default
-  },
-  // Configure session strategy
+  // Configure session management
   session: {
-    strategy: "jwt", // Use JWT for session management
+    // Explicitly type the strategy using the imported SessionStrategy type
+    strategy: "jwt" as SessionStrategy, // Use "jwt" or "database" as needed, cast to SessionStrategy
   },
-  // Specify the secret for signing tokens
+  // Specify custom pages
+  pages: {
+    signIn: "/en", // Redirect to the login page on sign in
+    error: "/en", // Redirect to the login page on error
+  },
+  // Add a secret for signing the JWT
   secret: process.env.NEXTAUTH_SECRET,
-  // Add callbacks if needed (e.g., jwt, session)
+  // You might need to add callbacks if you customize session or JWT
   // callbacks: {
   //   async jwt({ token, user }) {
-  //     // Persist the OAuth access_token and the user id to the JWT the first time
   //     if (user) {
   //       token.id = user.id;
   //     }
   //     return token;
   //   },
   //   async session({ session, token }) {
-  //     // Send properties to the client, such as an access_token and user id from a JWT.
-  //     session.user.id = token.id as string;
+  //     if (token) {
+  //       session.user.id = token.id;
+  //     }
   //     return session;
-  //   }
+  //   },
   // },
-  // Add debug logging if needed
-  // debug: process.env.NODE_ENV === "development", // Uncomment for detailed debug logs
 };
 
 // Create the NextAuth instance, which provides both handlers and auth
@@ -71,5 +78,5 @@ const { handlers, auth } = NextAuth(authOptions);
 // Export handlers for the API route handler file
 export { handlers };
 
-// Export auth helper for Server Components (like layout.tsx) - though getSession is preferred
+// Export the auth function for server-side session checking
 export { auth };

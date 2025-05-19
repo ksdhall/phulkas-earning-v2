@@ -7,6 +7,10 @@ import { getSession } from '@/utils/auth';
 // Import calculation functions
 import { calculateRangeSummary } from '@/lib/calculations';
 
+// Import the Bill interface and MealType enum from Prisma client
+import { Bill } from '@/types/Bill'; // Assuming Bill interface is here
+import { MealType } from '@prisma/client'; // Import MealType enum
+
 // Handler for GET requests to fetch reports based on date range
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +41,7 @@ export async function GET(request: NextRequest) {
 
 
     // Fetch bills within the specified date range
-    const bills = await prisma.bill.findMany({
+    const billsFromPrisma = await prisma.bill.findMany({
       where: {
         date: {
           gte: fromDate,
@@ -49,13 +53,27 @@ export async function GET(request: NextRequest) {
       },
     });
 
-     console.log(`API Reports: Fetched bills count: ${bills.length}`);
+     console.log(`API Reports: Fetched bills count: ${billsFromPrisma.length}`);
 
-    // Calculate the summary for the fetched bills
-    const summary = calculateRangeSummary(bills);
+    // Map the Prisma results to match the client-side Bill interface
+    // Specifically convert MealType enum to lowercase string literal
+    const processedBills: Bill[] = billsFromPrisma.map(bill => ({
+        ...bill,
+        // Convert MealType enum ('LUNCH'/'DINNER') to lowercase string ('lunch'/'dinner')
+        mealType: bill.mealType.toString().toLowerCase() as "lunch" | "dinner",
+         // Ensure isOurFood is boolean, default to true if null/undefined from db
+        isOurFood: bill.isOurFood ?? true,
+         // Ensure numberOfPeopleWorkingDinner is number, default to 1 if null/undefined from db
+        numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
+    }));
 
-    // Return both the bills and the summary
-    return NextResponse.json({ bills, summary });
+
+    // Calculate the summary using the processed bills
+    const summary = calculateRangeSummary(processedBills);
+
+    // Return both the original bills (or processed bills, depending on what the client expects) and the summary
+    // Returning processedBills ensures consistency with client-side handling
+    return NextResponse.json({ bills: processedBills, summary });
 
   } catch (error) {
     console.error('Error fetching reports:', error);

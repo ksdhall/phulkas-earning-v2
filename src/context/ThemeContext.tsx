@@ -1,71 +1,79 @@
 // src/context/ThemeContext.tsx
-"use client";
+"use client"; // This directive MUST be at the very top
 
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import { ThemeProvider as MuiThemeProvider, createTheme, Theme } from '@mui/material/styles';
+import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import { ThemeProvider, createTheme, PaletteMode } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
-import { lightTheme, darkTheme } from '@/theme'; // Assuming theme definitions are here
+import { red } from '@mui/material/colors'; // Example import if you use specific colors
 
-// Define the context type
+// Define the shape of the context value
 interface ThemeContextType {
-  themeMode: 'light' | 'dark';
-  toggleTheme: () => void; // Function to toggle theme
+  currentTheme: PaletteMode; // 'light' or 'dark'
+  toggleTheme: () => void;
 }
 
-// Create the context
+// Create the context with a default undefined value
+// createContext should only be called in client components
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Create the provider component
-interface ThemeProviderProps {
-  children: React.ReactNode;
-}
-
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  // State to hold the current theme mode, initialized from local storage or system preference
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('themeMode');
-      if (savedTheme === 'light' || savedTheme === 'dark') {
-        return savedTheme;
-      }
-      // Check system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
-    }
-    return 'light'; // Default to light if no preference found
-  });
-
-  // Effect to save theme preference to local storage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('themeMode', themeMode);
-    }
-  }, [themeMode]);
-
-  // Function to toggle the theme mode
-  const toggleTheme = () => {
-    setThemeMode(prevMode => (prevMode === 'light' ? 'dark' : 'light'));
-  };
-
-  // Memoize the theme object to avoid unnecessary re-creations
-  const theme = useMemo(() => createTheme(themeMode === 'light' ? lightTheme : darkTheme), [themeMode]);
-
-  return (
-    <ThemeContext.Provider value={{ themeMode, toggleTheme }}>
-      <MuiThemeProvider theme={theme}>
-        <CssBaseline /> {/* Provides a basic CSS reset */}
-        {children}
-      </MuiThemeProvider>
-    </ThemeContext.Provider>
-  );
-};
-
-// Custom hook to use the theme context
+// Custom hook to easily access the theme context
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
+    // This hook must be used within a ThemeProvider
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
 };
+
+// Theme provider component
+interface AppThemeProviderProps { // Renamed from ThemeProviderProps to avoid potential conflicts
+  children: ReactNode;
+}
+
+export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) => {
+  // State to manage the current theme mode ('light' or 'dark')
+  const [mode, setMode] = useState<PaletteMode>('light'); // Default to light theme
+
+  // Function to toggle the theme mode
+  const toggleTheme = () => {
+    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+  };
+
+  // Memoize the theme object to avoid unnecessary re-creations
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode, // Use the current mode
+          // You can customize your palette further here
+          // primary: {
+          //   main: '#556cd6',
+          // },
+          // secondary: {
+          //   main: '#19857b',
+          // },
+          // error: {
+          //   main: red.A400, // Example using imported color
+          // },
+        },
+      }),
+    [mode], // Recreate theme only when mode changes
+  );
+
+  // Memoize the context value
+  const contextValue = useMemo(() => ({ currentTheme: mode, toggleTheme }), [mode]);
+
+  return (
+    <ThemeContext.Provider value={contextValue}>
+      <ThemeProvider theme={theme}>
+        {/* CssBaseline kickstart an elegant, consistent, and simple baseline to build upon. */}
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </ThemeContext.Provider>
+  );
+};
+
+// Remember to wrap your root layout (app/layout.tsx) with <AppThemeProvider>
+// to make the theme context available throughout your application.
