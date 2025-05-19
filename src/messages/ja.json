@@ -1,0 +1,91 @@
+{
+  "nav": {
+    "app_name": "プルカアプリ",
+    "dashboard": "ダッシュボード",
+    "summary": "サマリー",
+    "logged_in_as": "{name}としてログイン中",
+    "logout": "ログアウト",
+    "login": "ログイン"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "todays_entries": "{date}のエントリー",
+    "add_bill_entry": "請求エントリーを追加",
+    "no_entries_today": "この日付のエントリーはありません。",
+    "summary_for_day": "{date}のサマリー",
+    "lunch_summary": "ランチサマリー",
+    "dinner_summary": "ディナーサマリー",
+    "food_total": "フード合計: ¥{amount}",
+    "drink_total": "ドリンク合計: ¥{amount}",
+    "phulkas_lunch_earnings": "プルカのランチ収益: ¥{amount}",
+    "phulkas_dinner_earnings": "プルカのディナー収益: ¥{amount}",
+    "day_total_earnings": "日合計収益: ¥{amount}",
+    "day_total_earnings_header": "日合計収益",
+    "add_bill_success": "請求エントリーが正常に追加されました！",
+    "add_bill_error": "請求エントリーの追加に失敗しました: {error}"
+  },
+  "summary": {
+    "title": "サマリーレポート",
+    "summary_for_range": "期間サマリー: {fromDate} から {toDate}",
+    "total_food": "フード合計 (期間): ¥{amount}",
+    "total_drinks": "ドリンク合計 (期間): ¥{amount}",
+    "phulkas_total_earnings": "プルカの合計収益 (期間): ¥{amount}",
+    "no_bills_found": "選択された期間の請求は見つかりませんでした。",
+    "entries_in_range": "期間内のエントリー ({count})",
+    "filter_title": "日付範囲でフィルタリング"
+  },
+  "bill_list": {
+    "date": "日付",
+    "column_time": "時間",
+    "food_amount": "フード (¥)",
+    "drink_amount": "ドリンク (¥)",
+    "total_amount": "合計 (¥)",
+    "actions": "アクション",
+    "edit": "編集",
+    "delete": "削除",
+    "time": {
+      "lunch": "ランチ",
+      "dinner": "ディナー"
+    },
+    "is_our_food": "私たちのフード",
+    "people_working": "勤務人数"
+  },
+   "edit": {
+    "title": "請求を編集",
+    "delete_bill": "請求を削除",
+    "bill_not_found": "請求が見つからないか、読み込めませんでした。",
+    "update_bill_error": "請求の更新に失敗しました: {error}",
+    "delete_bill_error": "請求の削除に失敗しました: {error}",
+    "delete_confirm_title": "削除の確認",
+    "delete_confirm_message": "この請求エントリー (ID: {id}) を削除してもよろしいですか？ この操作は元に戻せません。",
+    "delete": "削除",
+    "cancel": "キャンセル",
+    "deleting": "請求を削除中..."
+  },
+  "earnings_details": {
+    "lunch_food_base": "基本: ¥{base}",
+    "lunch_food_overage": "、超過: ¥{overage} / 2 = ¥{overageHalf}",
+    "lunch_drink_calc": "合計: ¥{total} * 0.25 = ¥{share}",
+    "dinner_drink_calc": "合計: ¥{total} * 0.25 = ¥{share}"
+  },
+  "errors": {
+    "failed_fetch": "データの取得に失敗しました。"
+  },
+  "login": {
+    "title": "ログイン",
+    "username_label": "ユーザー名",
+    "password_label": "パスワード",
+    "login_button": "ログイン",
+    "login_error": "ログインに失敗しました。ユーザー名とパスワードを確認してください。"
+  },
+  "localeSwitcher": {
+    "label": "言語",
+    "locale_en": "English",
+    "locale_ja": "日本語"
+  },
+  "date_range_filter": {
+    "from_date": "開始日",
+    "to_date": "終了日",
+    "apply": "フィルター適用"
+  }
+}

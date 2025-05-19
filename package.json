@@ -9,14 +9,28 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.9.1",
+    "@date-io/date-fns": "^3.2.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.1.0",
+    "@mui/lab": "^7.0.0-beta.12",
+    "@mui/material": "^7.1.0",
+    "@mui/x-date-pickers": "^8.3.1",
+    "@mui/x-date-pickers-pro": "^8.3.1",
+    "date-fns": "^4.1.0",
+    "next": "15.3.2",
+    "next-auth": "^4.24.7",
+    "next-intl": "^4.1.0",
+    "prisma": "^6.8.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.2"
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^19",
-    "@types/react-dom": "^19"
+    "@types/react-dom": "^19",
+    "typescript": "^5"
   }
 }
