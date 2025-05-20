@@ -55,7 +55,16 @@
     "no_dinner_entries": "ディナーの入力はありません",
     "no_lunch_entries": "ランチの入力はありません",
     "no_entries_today": "今日の入力はありません。",
-    "no_summary_data": "この期間のサマリーデータはありません。"
+    "no_summary_data": "この期間のサマリーデータはありません。",
+    "no_bills": "まだ請求書が記録されていません。最初の請求書を追加してください！",
+    "edit_bill_title": "請求書の編集",
+    "add_bill_title": "新規請求書の追加",
+    "date_label": "日付",
+    "meal_type_label": "食事タイプ",
+    "food_amount_label": "食事代",
+    "drink_amount_label": "飲み物代",
+    "is_our_food_label": "持ち込みですか？",
+    "num_people_working_label": "ディナーの勤務人数"
   },
   "meal_type": {
     "lunch": "ランチ",
@@ -63,10 +72,10 @@
   },
   "earnings_details": {
     "lunch_food_base_income": "ランチ食事代基本収入: {base}",
-    "lunch_food_overage": " (+超過分: {overage} / 2 = {overageHalf})",
+    "lunch_food_overage": " （+超過分: {overage} / 2 = {overageHalf}）",
     "total_lunch_food_income_share": "ランチ食事代からのフルカス合計売上: {amount}",
-    "drink_calc_lunch": "飲み物代の取り分 (ランチ): {total} * 0.5 = {share}",
-    "dinner_food_direct_share": "ディナー食事代直接収入: {share} (元値 {total}より)",
+    "drink_calc_lunch": "飲み物代の取り分 (ランチ): {total} * {percentage}% = {share}",
+    "dinner_food_direct_share": "ディナー食事代直接収入 (持ち込みの場合): {share} (元値 {total}より)",
     "dinner_common_pool_contrib_food": "食事代共通プール貢献: {amount}",
     "dinner_common_pool_contrib_drinks": "飲み物代共通プール貢献: {amount}",
     "total_common_pool": "共通プール合計: {amount}",
@@ -100,7 +109,8 @@
     "bill_not_found": "請求書が見つかりませんでした。"
   },
   "errors": {
-    "failed_fetch": "データの取得に失敗しました。もう一度お試しください。"
+    "failed_fetch": "データの取得に失敗しました。もう一度お試しください。",
+    "bill_not_found": "請求書が見つかりませんでした。"
   },
   "bill_form": {
     "add_title": "新しい請求書を追加",
@@ -125,6 +135,11 @@
     "num_people_min": "勤務人数は1人以上である必要があります。"
   },
   "general": {
-    "add": "追加"
+    "add": "追加",
+    "add_bill": "新規請求書を追加",
+    "edit_button": "編集",
+    "currency": "円",
+    "yes": "はい",
+    "no": "いいえ"
   }
 }

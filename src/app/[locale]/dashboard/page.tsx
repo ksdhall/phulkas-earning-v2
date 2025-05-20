@@ -2,15 +2,21 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { redirect } from "next/navigation";
-import DashboardPageClient from '@/components/DashboardPageClient'; // Import the new client component
+import DashboardPageClient from '@/components/DashboardPageClient';
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  params: {
+    locale: string;
+  };
+}
+
+export default async function DashboardPage({ params }: DashboardPageProps) { // Corrected: params is directly available
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/en"); // Redirect unauthenticated users to the login page
+    redirect(`/${params.locale}`); // Use params.locale directly
   }
 
-  // If authenticated, render the client-side dashboard component
-  return <DashboardPageClient />;
+  // Render the client component, passing the locale
+  return <DashboardPageClient locale={params.locale} />;
 }

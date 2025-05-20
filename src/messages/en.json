@@ -38,7 +38,7 @@
     "invalid_date_range": "Invalid date range. Please select valid dates.",
     "from_date_after_to_date": "From date cannot be after To date.",
     "dates_not_selected": "Please select both From and To dates.",
-    "invalid_date_format": "Invalid date format. Please use YYYY-MM-DD."
+    "invalid_date_format": "Invalid date format. Please use Букмекерлар-MM-DD."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -55,7 +55,16 @@
     "no_dinner_entries": "No Dinner Entries",
     "no_lunch_entries": "No Lunch Entries",
     "no_entries_today": "No entries for today.",
-    "no_summary_data": "No summary data available for this period."
+    "no_summary_data": "No summary data available for this period.",
+    "no_bills": "No bills recorded yet. Add your first bill!",
+    "edit_bill_title": "Edit Bill",
+    "add_bill_title": "Add New Bill",
+    "date_label": "Date",
+    "meal_type_label": "Meal Type",
+    "food_amount_label": "Food Amount",
+    "drink_amount_label": "Drink Amount",
+    "is_our_food_label": "Our Food?",
+    "num_people_working_label": "Number of People Working Dinner"
   },
   "meal_type": {
     "lunch": "Lunch",
@@ -65,8 +74,8 @@
     "lunch_food_base_income": "Lunch Food Base Income: {base}",
     "lunch_food_overage": " (+Overage: {overage} / 2 = {overageHalf})",
     "total_lunch_food_income_share": "Total Lunch Food Income Share: {amount}",
-    "drink_calc_lunch": "Drinks Share (Lunch): {total} * 0.5 = {share}",
-    "dinner_food_direct_share": "Dinner Food Direct Share: {share} (from Raw {total})",
+    "drink_calc_lunch": "Drinks Share (Lunch): {total} * {percentage}% = {share}",
+    "dinner_food_direct_share": "Dinner Food Direct Share (if Our Food): {share} (from Raw {total})",
     "dinner_common_pool_contrib_food": "Food Contrib to Common Pool: {amount}",
     "dinner_common_pool_contrib_drinks": "Drink Contrib to Common Pool: {amount}",
     "total_common_pool": "Total Common Pool: {amount}",
@@ -100,7 +109,8 @@
     "bill_not_found": "Bill not found."
   },
   "errors": {
-    "failed_fetch": "Failed to fetch data. Please try again."
+    "failed_fetch": "Failed to fetch data. Please try again.",
+    "bill_not_found": "Bill not found."
   },
   "bill_form": {
     "add_title": "Add New Bill",
@@ -125,6 +135,11 @@
     "num_people_min": "Number of people working must be at least 1."
   },
   "general": {
-    "add": "Add"
+    "add": "Add",
+    "add_bill": "Add New Bill",
+    "edit_button": "Edit",
+    "currency": "JPY",
+    "yes": "Yes",
+    "no": "No"
   }
 }

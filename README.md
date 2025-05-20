@@ -1,186 +1,76 @@
-# Phulkas Earning Application Documentation
+# Phulkas Earning App
 
-This document outlines the requirements, calculation logic, and design specifications for the Phulkas Earning Application, based on the features and structure implemented.
+This application helps manage and calculate daily and range-based earnings for "Phulkas" based on lunch and dinner bills, incorporating specific business logic for revenue sharing and common pool contributions.
 
-## 1. Detailed Requirements and Calculation Logics
+## Features
 
-The primary goal of this application is to allow Phulkas to track their earnings from lunch and dinner bills, providing a clear summary for individual days and selected date ranges.
+* **User Authentication:** Secure login for authorized users.
+* **Daily Dashboard:** View a summary of earnings for a selected date, categorized by lunch and dinner.
+* **Bill Management:** Add, edit, and delete individual lunch and dinner bills.
+* **Configurable Calculations:** Easily adjust key percentages and base incomes for earnings calculations via a central configuration file.
+* **Internationalization (i18n):** Support for multiple languages (English and Japanese).
+* **Responsive UI:** Optimized for various screen sizes using Material-UI.
 
-### Core Data Points per Bill:
+---
 
-For each bill entry, the following information is captured:
+## Setup
 
-* **Date:** The date the bill occurred (formatted as `yyyy-MM-dd`).
-* **Meal Type:** Whether the bill was for 'Lunch' or 'Dinner'.
-* **Food Amount:** The total amount earned from food for this bill.
-* **Drink Amount:** The total amount earned from drinks for this bill.
-* **Is Our Food? (Dinner Only):** A flag (Yes/No) indicating if the food sold during this dinner bill was specifically "Our Food" (as per a specific internal rule). This field is optional for Lunch.
-* **Number of People Working Dinner (Dinner Only):** The number of people working the dinner shift for this bill. This field is optional for Lunch and relevant for sharing calculations when "Is Our Food?" is No.
+To get this project up and running locally:
 
-### Calculation Logics:
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repo-url>
+    cd phulkas-earning-app
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install # or yarn install
+    ```
+3.  **Set up your database:**
+    * Ensure you have a PostgreSQL or SQLite database configured.
+    * Create a `.env.local` file in the root directory and add your database connection string:
+        ```
+        DATABASE_URL="postgresql://user:password@host:port/database"
+        # Or for SQLite:
+        # DATABASE_URL="file:./dev.db"
+        ```
+    * Set up NextAuth.js secrets (replace with strong, random strings):
+        ```
+        NEXTAUTH_SECRET="YOUR_NEXTAUTH_SECRET"
+        NEXTAUTH_URL="http://localhost:3000" # Or your deployment URL
+        ```
+4.  **Generate Prisma Client and Push Schema:**
+    ```bash
+    npx prisma generate
+    npx prisma db push
+    ```
+    This will create your database tables based on `prisma/schema.prisma`.
+5.  **Run the development server:**
+    ```bash
+    npm run dev # or yarn dev
+    ```
+    The application will be accessible at `http://localhost:3000`.
 
-The application calculates earnings based on different rules for Lunch and Dinner.
+---
 
-#### Lunch Earnings:
+## Database Design Approach
 
-Lunch earnings are calculated based on a base food amount threshold of **¥8000** and the total drink amount.
+The application uses Prisma as its Object-Relational Mapper (ORM) to interact with the database.
 
-* **Food Earnings:** 50% of the food amount **above** the base food threshold of **¥8000**. If the food amount is below or equal to the **¥8000** threshold, food earnings are ¥0.
-    * Formula: `max(0, Food Amount - 8000) * 0.5`
-* **Drink Earnings:** 50% of the total drink amount.
-    * Formula: `Drink Amount * 0.5`
-* **Total Lunch Earnings:** Food Earnings + Drink Earnings.
+### `Bill` Model
 
-#### Dinner Earnings:
-
-Dinner earnings calculations depend on whether the food was marked as "Is Our Food?".
-
-* **If "Is Our Food?" is Yes:**
-    * **Food Earnings:** 75% of the total food amount.
-        * Formula: `Food Amount * 0.75`
-    * **Drink Earnings:** 50% of the total drink amount.
-        * Formula: `Drink Amount * 0.5`
-    * **Total Dinner Earnings:** Food Earnings + Drink Earnings.
-* **If "Is Our Food?" is No:**
-    * **Food Shift Share Pool:** 25% of the total food amount.
-        * Formula: `Food Amount * 0.25`
-    * **Food Earnings Share:** Food Shift Share Pool divided by the "Number of People Working Dinner". This amount is the individual's share from the shared pool. (Assumes Number of People Working Dinner is at least 1).
-        * Formula: `(Food Amount * 0.25) / Number of People Working Dinner`
-    * **Drink Earnings:** 50% of the total drink amount (this is not shared).
-        * Formula: `Drink Amount * 0.5`
-    * **Total Dinner Earnings:** Food Earnings Share + Drink Earnings.
-
-#### Daily Total Earnings:
-
-The total earnings for a single day are the sum of the Total Lunch Earnings and the Total Dinner Earnings for all bills recorded on that specific date.
-
-#### Range Total Earnings:
-
-The total earnings for a selected date range are the sum of the Daily Total Earnings for every day within that range.
-
-## 2. Design Specs (including Database)
-
-The application follows a modern web development architecture using Next.js App Router, integrating several libraries for UI, state management, data fetching, and database interaction.
-
-### Core Entities:
-
-* **User:** Represents a user who can log in to access and manage bills. (Authentication handled via NextAuth.js).
-* **Bill:** Represents a single record of earnings for a meal on a specific date.
-
-### Database Schema (Prisma - based on `src/lib/db.ts`):
-
-The `Bill` model in the Prisma schema (likely `prisma/schema.prisma`) should have the following fields:
+The core data model is `Bill`, which stores details for each transaction.
 
 ```prisma
+// prisma/schema.prisma
 model Bill {
-  id                          Int       @id @default(autoincrement())
-  date                        DateTime  // Date of the bill
-  mealType                    MealType  // Enum: LUNCH, DINNER
-  foodAmount                  Float     // Amount from food
-  drinkAmount                 Float     // Amount from drinks
-  isOurFood                   Boolean?  // Optional for dinner bills (nullable)
-  numberOfPeopleWorkingDinner Int?      // Optional for dinner bills (nullable)
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @updatedAt
-}
-
-enum MealType {
-  LUNCH
-  DINNER
-}
-```
-
-**Note:** The `mealType` Enum values are typically uppercase in Prisma.
-
-### Technology Stack:
-
-* **Framework:** Next.js (with App Router)
-* **Frontend:** React
-* **UI Components:** Material UI (MUI)
-* **Styling:** MUI's `sx` prop, CSS Modules (`globals.css`)
-* **State Management:** React's `useState`, `useEffect`, `useMemo`, `useCallback` hooks for local component state and derived values.
-* **Authentication:** NextAuth.js
-* **Internationalization (i18n):** `next-intl`
-* **Date Handling:** `date-fns`
-* **Database:** Prisma ORM to interact with the database (e.g., SQLite, PostgreSQL, MySQL).
-* **Data Fetching:** Next.js API Routes (`app/api/...`)
-* **File Structure:** Standard Next.js App Router structure (`app/[locale]/...`, `components/...`, `lib/...`, `i18n/...`).
-
-### Application Flow:
-
-1.  **Authentication:** Users log in via a login page (`app/[locale]/page.tsx` split into Client/Server components). Authentication state managed by NextAuth.js and accessed via `useSession`.
-2.  **Protected Routes:** Pages like Dashboard, Add Bill, and Summary are protected, redirecting unauthenticated users.
-3.  **Add Bill Page (`app/[locale]/add-bill/page.tsx`):**
-    * Displays a form (`BillForm` component).
-    * Form handles input for date, meal type, food/drink amounts, and dinner-specific fields.
-    * Submits data to an API route (`app/api/bills`).
-4.  **Summary Page (`app/[locale]/summary/page.tsx`):**
-    * Allows selecting a date range using a `DateRangeFilter` component (handles date inputs).
-    * An "Apply Filter" button triggers data fetching for the selected range via an API route (`app/api/reports`).
-    * Displays a summary card showing total food, drink, and Phulka's earnings for the selected range.
-    * Displays a table of daily summaries within the range (rendering daily summaries/calculations).
-    * Lists individual bills within the range (`BillList` component).
-    * Provides options to edit or delete bills (calling API routes `app/api/bills/[id]`).
-5.  **Edit Bill Page (`app/[locale]/edit/[id]/page.tsx`):**
-    * Fetches existing bill data based on the ID from URL parameters.
-    * Populates the `BillForm` with existing data.
-    * Allows updating the bill (calling API route `app/api/bills/[id]`).
-    * Allows deleting the bill from the edit page.
-6.  **Layout (`app/[locale]/layout.tsx`):**
-    * Provides a consistent navigation bar (`AppBar`) with links (Dashboard, Add Bill, Summary, Sign Out).
-    * Includes `LanguageSwitcher` and `ThemeToggleButton` components.
-    * Wraps content with necessary providers (`AuthProvider`, `NextIntlClientProvider`, `AppThemeProvider`). Client component wrappers (`ThemeProviderWrapper`) are used in the Server Component layout for providers that use client-side hooks.
-7.  **API Routes (`app/api/...`):**
-    * Handle incoming requests for creating, reading, updating, and deleting bills, interacting with the database via Prisma (`lib/db.ts`).
-    * `/api/bills`: POST (create), GET (all bills - though filtering is often done in /api/reports).
-    * `/api/bills/[id]`: GET (single bill), PUT (update), DELETE (delete).
-    * `/api/reports`: GET (bills and summary for a date range).
-
-## 3. Prompt for Starting New Development
-
-If you decide that troubleshooting the current project state is too difficult and want to start with a clean base based on these requirements, you can use this prompt to explain the project and ask for code generation:
-
-```
-I need help building a Next.js 14 application with App Router, TypeScript, and Material UI (MUI v5 or v7). The application tracks earnings from restaurant bills for "Phulkas".
-
-Here are the core requirements, calculation rules, and the desired database schema using Prisma:
-
-**Core Requirements:**
-- User authentication (login/logout).
-- Ability to add new bill entries with: Date, Meal Type (Lunch/Dinner), Food Amount, Drink Amount.
-- For Dinner bills, capture two optional fields: "Is Our Food?" (boolean, Yes/No) and "Number of People Working Dinner" (number).
-- View a list of all bills.
-- Edit existing bill entries.
-- Delete existing bill entries.
-- View a summary of earnings for a selected date range.
-- View a table of daily earnings summaries within a selected date range.
-- Internationalization (i18n) with multiple locales (e.g., English, Japanese).
-- Light/Dark theme toggle.
-
-**Calculation Logics:**
-- **Lunch Earnings:**
-  - Food earnings: 50% of food amount *above* a ¥8000 threshold (0 if below).
-  - Drink earnings: 50% of total drink amount.
-  - Total Lunch Earnings = max(0, Food Amount - 8000) * 0.5 + Drink Amount * 0.5
-- **Dinner Earnings:**
-  - If "Is Our Food?" is Yes: Food Amount * 0.75 + Drink Amount * 0.5
-  - If "Is Our Food?" is No: (Food Amount * 0.25) / Number of People Working Dinner + Drink Amount * 0.5
-- **Daily Total Earnings:** Sum of Total Lunch and Total Dinner earnings for a day.
-- **Range Total Earnings:** Sum of Daily Total Earnings across the selected range.
-
-**Database Schema (Prisma):**
-
-```prisma
-model Bill {
-  id                          Int       @id @default(autoincrement())
+  id                          Int      @id @default(autoincrement())
   date                        DateTime
   mealType                    MealType
   foodAmount                  Float
   drinkAmount                 Float
-  isOurFood                   Boolean?
-  numberOfPeopleWorkingDinner Int?
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @updatedAt
+  isOurFood                   Boolean  @default(true) // Relevant for Dinner calculations
+  numberOfPeopleWorkingDinner Int      @default(1) // Relevant for Dinner calculations
 }
 
 enum MealType {
@@ -189,29 +79,107 @@ enum MealType {
 }
 ```
 
-**Technical Details:**
-- Use Next.js App Router.
-- Use TypeScript.
-- Use Material UI for components.
-- Use Prisma for database interaction.
-- Use NextAuth.js for authentication.
-- Use `next-intl` for internationalization.
-- Use `date-fns` for date handling.
-- Structure the application using Server and Client Components appropriately. Context providers (like Auth, i18n, Theme) used in the layout should be within Client Component wrappers.
+* **`id`**: Unique identifier for each bill.
+* **`date`**: The date of the bill (stored as `DateTime`, but treated as `YYYY-MM-DD` for calculations).
+* **`mealType`**: An `Enum` (`LUNCH` or `DINNER`) to differentiate calculation logic.
+* **`foodAmount`**: Total amount of food on the bill.
+* **`drinkAmount`**: Total amount of drinks on the bill.
+* **`isOurFood`**: A boolean flag, primarily used for dinner calculations, indicating if the food was provided by "us" (Phulkas).
+* **`numberOfPeopleWorkingDinner`**: The number of people working during the dinner shift, used for common pool sharing.
 
-Please help me build the necessary files for this application, starting with the core components and pages. I will need code for:
-- The Prisma schema (`prisma/schema.prisma`).
-- The database client and functions (`lib/db.ts`).
-- The authentication configuration and handler (`auth.ts`, `app/api/auth/[...nextauth]/route.ts`, `components/AuthProvider.tsx`).
-- The i18n configuration (`i18n.ts`, `i18n/routing.ts`, message files).
-- The theme context and provider (`context/ThemeContext.tsx`, `components/ThemeProviderWrapper.tsx`).
-- The root layout (`app/layout.tsx`, `app/[locale]/layout.tsx`).
-- The login page (`app/[locale]/page.tsx` split into Client/Server components).
-- The add bill page (`app/[locale]/add-bill/page.tsx` and the `BillForm` component).
-- The summary page (`app/[locale]/summary/page.tsx` split into Client/Server components for data fetching/rendering, `DateRangeFilter`, `DailySummaryCard`, `BillList` components).
-- API routes for bills and reports (`app/api/bills/route.ts`, `app/api/bills/[id]/route.ts`, `app/api/reports/route.ts`).
-- Basic types (`types/Bill.ts`, etc.).
-- Calculation logic (`lib/calculations.ts`).
-- Utility components like `LanguageSwitcher` and `ThemeToggleButton`.
+---
 
-Please provide the code for these files, explaining the purpose of each and how they fit together.
+## Calculation Logic
+
+The earnings calculation is central to the application. Percentages and base incomes are defined in `src/config/app.ts` for easy configurability.
+
+### `src/config/app.ts`
+
+```typescript
+export const AppConfig = {
+  LUNCH_FOOD_BASE_INCOME: 8000,
+  LUNCH_FOOD_OVERAGE_SHARE_PERCENT: 0.5, // 50%
+  LUNCH_DRINK_SHARE_PERCENT: 0.5, // 50%
+
+  DINNER_FOOD_OUR_SHARE_PERCENT: 0.75, // 75%
+  DINNER_FOOD_COMMON_POOL_PERCENT: 0.25, // 25% (for food, always goes to common pool)
+  DINNER_DRINK_COMMON_POOL_PERCENT: 0.25, // 25% (for drinks, always goes to common pool)
+};
+```
+
+### Lunch Earnings Calculation
+
+The `calculateLunchMealSummary` function determines Phulkas' share from lunch bills.
+
+* **Food Earnings:**
+    * A base income (`LUNCH_FOOD_BASE_INCOME`) is earned up to this amount.
+    * Any amount exceeding the base income is considered "overage."
+    * Phulkas earns the base income plus a configurable percentage (`LUNCH_FOOD_OVERAGE_SHARE_PERCENT`) of the overage.
+    * *Formula:* `LUNCH_FOOD_BASE_INCOME + (max(0, rawFoodTotal - LUNCH_FOOD_BASE_INCOME) * LUNCH_FOOD_OVERAGE_SHARE_PERCENT)`
+* **Drink Earnings:**
+    * Phulkas earns a configurable percentage (`LUNCH_DRINK_SHARE_PERCENT`) of the total drink bill.
+    * *Formula:* `rawDrinkTotal * LUNCH_DRINK_SHARE_PERCENT`
+* **Total Lunch Earnings:** Sum of Food Earnings and Drink Earnings.
+
+### Dinner Earnings Calculation
+
+The `calculateDinnerMealSummary` function handles dinner bills, which involve a "common pool" concept and the `isOurFood` flag.
+
+* **Direct Food Earnings (Phulkas' Direct Share):**
+    * If `isOurFood` is `true`: Phulkas earns a configurable percentage (`DINNER_FOOD_OUR_SHARE_PERCENT`, e.g., 75%) directly from the `rawFoodTotal`.
+    * If `isOurFood` is `false`: Phulkas earns `0` directly from the food bill.
+* **Common Pool Contributions:**
+    * **Food Contribution:** A configurable percentage (`DINNER_FOOD_COMMON_POOL_PERCENT`, e.g., 25%) of the `rawFoodTotal` *always* goes into the common pool, regardless of `isOurFood`.
+    * **Drink Contribution:** A configurable percentage (`DINNER_DRINK_COMMON_POOL_PERCENT`, e.g., 25%) of the `rawDrinkTotal` *always* goes into the common pool.
+* **Total Common Pool:** Sum of Food Contribution and Drink Contribution to the common pool.
+* **Our Share from Common Pool:** The `Total Common Pool` is divided equally among the `numberOfPeopleWorkingDinner`.
+    * *Formula:* `Total Common Pool / max(1, numberOfPeopleWorkingDinner)`
+* **Total Dinner Earnings:** Sum of `Direct Food Earnings` and `Our Share from Common Pool`.
+
+### Daily Aggregation
+
+The `calculateDailyEarnings` function aggregates all lunch and dinner bills for a given day. For dinner, it first sums up all `rawFoodTotal` and `rawDrinkTotal` for that day, and then applies the `calculateDinnerMealSummary` logic *once* to these aggregated totals, using the `isOurFood` and `numberOfPeopleWorkingDinner` values from the *last* recorded dinner bill for that day (or a default if no dinner bills). This ensures common pool calculations are correct across multiple dinner entries on a single day.
+
+---
+
+## UI/UX Specifications
+
+* **Responsive Design:** The application is built with Material-UI and designed to be fully responsive, adapting to mobile, tablet, and desktop screens.
+* **Consistent Modals:** "Add Bill" and "Edit Bill" functionalities are handled via a single, consistent modal dialog for a smoother user experience, avoiding page navigations for form interactions.
+* **Clear Currency Formatting:** All currency amounts are formatted with the Yen symbol (`¥`) and locale-specific thousands separators.
+* **Date Navigation:** Easy navigation between days on the dashboard using arrow buttons.
+* **Loading Indicators:** Clear loading spinners are displayed during data fetches and form submissions.
+* **Error Handling:** User-friendly error messages are displayed for API failures or validation issues.
+
+---
+
+## API Endpoints
+
+The application interacts with the backend via Next.js API Routes.
+
+* `POST /api/bills`: Create a new bill.
+* `GET /api/bills`: Fetch all bills.
+* `GET /api/bills/[id]`: Fetch a single bill by ID.
+* `PUT /api/bills/[id]`: Update a bill by ID.
+* `DELETE /api/bills/[id]`: Delete a bill by ID.
+* `GET /api/reports?from={date}&to={date}`: Fetch bills within a specified date range (used for daily summaries).
+
+---
+
+## Internationalization (i18n)
+
+The application uses `next-intl` for internationalization.
+
+* Translation files are located in the `messages/` directory (e.g., `messages/en.json`, `messages/ja.json`).
+* Currency symbols (`¥`) are *not* embedded in the translation strings; they are added at runtime by the `formatCurrency` utility function to prevent duplication.
+
+---
+
+## Future Enhancements
+
+* **User Management:** More robust user roles and permissions.
+* **Analytics/Reporting:** Advanced reports (e.g., monthly summaries, trend analysis).
+* **Configurable UI for Percentages:** Allow administrators to change `AppConfig` values directly through the UI.
+* **Bill Filtering/Sorting:** More extensive options for filtering and sorting bills in the list.
+* **Offline Support:** Implement service workers for basic offline functionality.
+* **Unit Testing:** Add comprehensive unit tests for calculation logic and components.

@@ -13,63 +13,62 @@ import {
   Alert,
 } from '@mui/material';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { Bill } from '@/types/Bill'; // Assuming this path is correct
+import { useRouter, useParams } from 'next/navigation';
+import { Bill } from '@/types/Bill';
 import { format } from 'date-fns';
 
 interface BillFormProps {
   billId?: string; // Optional: for editing existing bills
+  initialBill?: Bill; // Data to pre-populate form when editing
+  onSubmit: (formData: Omit<Bill, 'id'>, billId?: string) => Promise<void>; // Callback to parent
+  isSubmitting: boolean; // Loading state from parent (for submit button)
 }
 
-const BillForm: React.FC<BillFormProps> = ({ billId }) => {
+const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSubmitting }) => {
   const t = useTranslations('bill_form');
-  const tMealType = useTranslations('meal_type'); // For meal type options
+  const tMealType = useTranslations('meal_type');
   const tErrors = useTranslations('errors');
-  const tGeneral = useTranslations('general'); // For 'Add' button
+  const tGeneral = useTranslations('general');
 
   const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as string;
 
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [mealType, setMealType] = useState<'lunch' | 'dinner'>('lunch');
-  const [foodAmount, setFoodAmount] = useState<number | ''>(0); // Initialize with 0 for better UX, or '' for truly empty
-  const [drinkAmount, setDrinkAmount] = useState<number | ''>(0); // Initialize with 0 or ''
+  const [foodAmount, setFoodAmount] = useState<number | ''>(0);
+  const [drinkAmount, setDrinkAmount] = useState<number | ''>(0);
   const [isOurFood, setIsOurFood] = useState<boolean>(true);
   const [numberOfPeopleWorkingDinner, setNumberOfPeopleWorkingDinner] = useState<number | ''>(1);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null); // Internal form validation error
 
+  // Effect to populate form when initialBill data is provided (for editing)
   useEffect(() => {
-    if (billId) {
-      setLoading(true);
-      const fetchBill = async () => {
-        try {
-          const response = await fetch(`/api/bills/${billId}`);
-          if (!response.ok) {
-            throw new Error(`Error: ${response.status}`);
-          }
-          const data: Bill = await response.json();
-          setDate(format(new Date(data.date), 'yyyy-MM-dd'));
-          setMealType(data.mealType);
-          setFoodAmount(data.foodAmount);
-          setDrinkAmount(data.drinkAmount);
-          setIsOurFood(data.isOurFood ?? true); // Default to true
-          setNumberOfPeopleWorkingDinner(data.numberOfPeopleWorkingDinner ?? 1); // Default to 1
-        } catch (err: any) {
-          setError(tErrors('failed_fetch') + `: ${err.message}`);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchBill();
+    if (initialBill) {
+      setDate(initialBill.date); // initialBill.date is already 'YYYY-MM-DD' string from parent
+      setMealType(initialBill.mealType);
+      setFoodAmount(initialBill.foodAmount);
+      setDrinkAmount(initialBill.drinkAmount);
+      setIsOurFood(initialBill.isOurFood ?? true);
+      setNumberOfPeopleWorkingDinner(initialBill.numberOfPeopleWorkingDinner ?? 1);
+    } else {
+      // Reset form for adding new bill when initialBill is undefined
+      setDate(format(new Date(), 'yyyy-MM-dd'));
+      setMealType('lunch');
+      setFoodAmount(0);
+      setDrinkAmount(0);
+      setIsOurFood(true);
+      setNumberOfPeopleWorkingDinner(1);
     }
-  }, [billId, tErrors]);
+    setFormError(null); // Clear errors on initial load/reset
+  }, [initialBill]);
+
 
   const handleFoodAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '') {
-      setFoodAmount(''); // Allow empty string
+      setFoodAmount('');
     } else {
       const numValue = Number(value);
       if (!isNaN(numValue)) {
@@ -81,7 +80,7 @@ const BillForm: React.FC<BillFormProps> = ({ billId }) => {
   const handleDrinkAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '') {
-      setDrinkAmount(''); // Allow empty string
+      setDrinkAmount('');
     } else {
       const numValue = Number(value);
       if (!isNaN(numValue)) {
@@ -93,7 +92,7 @@ const BillForm: React.FC<BillFormProps> = ({ billId }) => {
   const handleNumberOfPeopleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '') {
-      setNumberOfPeopleWorkingDinner(''); // Allow empty string
+      setNumberOfPeopleWorkingDinner('');
     } else {
       const numValue = Number(value);
       if (!isNaN(numValue)) {
@@ -104,24 +103,22 @@ const BillForm: React.FC<BillFormProps> = ({ billId }) => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setFormError(null); // Clear previous form errors
 
-    // Basic validation
-    // FoodAmount and DrinkAmount are now non-mandatory, default to 0 if empty string
     const finalFoodAmount = foodAmount === '' ? 0 : foodAmount;
     const finalDrinkAmount = drinkAmount === '' ? 0 : drinkAmount;
-    const finalNumPeople = numberOfPeopleWorkingDinner === '' ? 1 : numberOfPeopleWorkingDinner; // Default to 1 if empty
+    const finalNumPeople = numberOfPeopleWorkingDinner === '' ? 1 : numberOfPeopleWorkingDinner;
 
     if (mealType === 'dinner' && finalNumPeople < 1) {
-      setError(t('num_people_min'));
-      setLoading(false);
+      setFormError(t('num_people_min'));
       return;
     }
 
-    const billData = {
-      date: new Date(date),
+    // Convert date to a consistent ISO 8601 string (e.g., "2025-05-20T00:00:00.000Z")
+    const dateAsISOString = new Date(`${date}T00:00:00`).toISOString();
+
+    const formDataToSend: Omit<Bill, 'id'> = {
+      date: dateAsISOString,
       mealType,
       foodAmount: finalFoodAmount,
       drinkAmount: finalDrinkAmount,
@@ -129,74 +126,29 @@ const BillForm: React.FC<BillFormProps> = ({ billId }) => {
       numberOfPeopleWorkingDinner: finalNumPeople,
     };
 
-    const method = billId ? 'PUT' : 'POST';
-    const url = billId ? `/api/bills/${billId}` : '/api/bills';
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(billData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || response.statusText);
-      }
-
-      if (billId) {
-        setSuccess(t('edit_success'));
-      } else {
-        setSuccess(t('add_success'));
-        // Clear form for new entry
-        setDate(format(new Date(), 'yyyy-MM-dd'));
-        setMealType('lunch');
-        setFoodAmount(0);
-        setDrinkAmount(0);
-        setIsOurFood(true);
-        setNumberOfPeopleWorkingDinner(1);
-      }
-      router.push('/en/dashboard'); // Redirect to dashboard after success
-    } catch (err: any) {
-      setError((billId ? t('edit_error') : t('add_error')) + `: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+    // Call the onSubmit prop passed from the parent
+    // The parent (DashboardPageClient) is responsible for handling the API call (POST/PUT)
+    await onSubmit(formDataToSend, billId);
   };
-
-  if (loading && billId) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Box
       component="form"
       onSubmit={handleSubmit}
       sx={{
-        marginTop: 4,
+        marginTop: 0,
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
         maxWidth: 500,
         margin: '0 auto',
-        padding: 3,
-        border: '1px solid #ccc',
-        borderRadius: 2,
-        boxShadow: 3,
+        padding: 0,
+        border: 'none',
+        boxShadow: 'none',
       }}
     >
-      <Typography variant="h5" component="h1" gutterBottom>
-        {billId ? t('edit_title') : t('add_title')}
-      </Typography>
-
-      {error && <Alert severity="error">{error}</Alert>}
-      {success && <Alert severity="success">{success}</Alert>}
+      {/* Title is now handled by parent DialogTitle */}
+      {formError && <Alert severity="error">{formError}</Alert>}
 
       <TextField
         label={t('date_label')}
@@ -225,21 +177,19 @@ const BillForm: React.FC<BillFormProps> = ({ billId }) => {
       <TextField
         label={t('food_amount_label')}
         type="number"
-        value={foodAmount} // Use number or ''
+        value={foodAmount}
         onChange={handleFoodAmountChange}
         fullWidth
         inputProps={{ min: 0 }}
-        // Removed `required`
       />
 
       <TextField
         label={t('drink_amount_label')}
         type="number"
-        value={drinkAmount} // Use number or ''
+        value={drinkAmount}
         onChange={handleDrinkAmountChange}
         fullWidth
         inputProps={{ min: 0 }}
-        // Removed `required`
       />
 
       {mealType === 'dinner' && (
@@ -258,11 +208,10 @@ const BillForm: React.FC<BillFormProps> = ({ billId }) => {
           <TextField
             label={t('num_people_working_label')}
             type="number"
-            value={numberOfPeopleWorkingDinner} // Use number or ''
+            value={numberOfPeopleWorkingDinner}
             onChange={handleNumberOfPeopleChange}
             fullWidth
             inputProps={{ min: 1 }}
-            // No longer required, but validated to be >= 1 if it's dinner
             error={mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)}
             helperText={
               mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)
@@ -273,10 +222,18 @@ const BillForm: React.FC<BillFormProps> = ({ billId }) => {
         </>
       )}
 
-      <Button type="submit" variant="contained" color="primary" disabled={loading} sx={{ mt: 2 }}>
-        {loading ? <CircularProgress size={24} color="inherit" /> : (billId ? t('save_button') : tGeneral('add'))}
+      <Button type="submit" variant="contained" color="primary" disabled={isSubmitting} sx={{ mt: 2 }}>
+        {isSubmitting ? <CircularProgress size={24} color="inherit" /> : (billId ? t('save_button') : tGeneral('add'))}
       </Button>
-      <Button type="button" variant="outlined" onClick={() => router.push('/en/dashboard')} disabled={loading}>
+      {/* Cancel button now just closes the modal, handled by parent's Dialog */}
+      <Button type="button" variant="outlined" onClick={() => {
+        // This button is typically for navigating back if BillForm was a standalone page.
+        // In a modal context, the modal's onClose handles the "cancel" action.
+        // If you want a specific "cancel" action here that is different from modal close,
+        // you might need an additional prop for a cancel callback.
+        // For now, it will navigate to dashboard, which will effectively close the modal.
+        router.push(`/${locale}/dashboard`);
+      }} disabled={isSubmitting}>
         {t('cancel_button')}
       </Button>
     </Box>

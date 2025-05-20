@@ -1,10 +1,10 @@
-// src/components/DailySummaryCard.tsx
 "use client";
 
 import React from 'react';
 import { Box, Typography, Paper, Grid } from '@mui/material';
 import { useTranslations } from 'next-intl';
 import { DailySummary, MealSummary } from '@/lib/calculations';
+import { AppConfig } from '@/config/app'; // Ensure AppConfig is imported
 
 interface DailySummaryCardProps {
   date?: string;
@@ -25,19 +25,16 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
 
   const { lunch, dinner, dayTotalEarnings } = summary;
 
-  // MODIFIED formatCurrency function for robustness
   const formatCurrency = (amount: number | string) => {
     let numericAmount: number;
 
     if (typeof amount === 'string') {
-      // Remove any Yen symbols (¥), commas, or other non-numeric characters, then parse
       const cleanedString = amount.replace(/[¥,]/g, '');
       numericAmount = Number(cleanedString);
     } else {
       numericAmount = amount;
     }
 
-    // Ensure it's a valid number, default to 0 if not
     if (isNaN(numericAmount)) {
       numericAmount = 0;
     }
@@ -47,8 +44,6 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
 
   const renderMealDetails = (meal: 'lunch' | 'dinner', mealSummary: MealSummary) => {
     const isLunch = meal === 'lunch';
-    const LUNCH_FOOD_BASE_INCOME = 8000;
-    const lunchFoodOverage = Math.max(0, mealSummary.rawFoodTotal - LUNCH_FOOD_BASE_INCOME);
     
     // For dinner, pull additional info for detailed breakdown display
     const isOurFood = mealSummary.isOurFood ?? true;
@@ -63,13 +58,17 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
     let ourShareFromCommonPoolDisplay = 0;
 
     if (!isLunch) { // Dinner specific calculations for display breakdown
+      // Direct food earnings for display
       if (isOurFood) {
-        directFoodEarningsDisplay = mealSummary.rawFoodTotal * 0.75;
-        commonPoolFoodContributionDisplay = mealSummary.rawFoodTotal * 0.25;
+        directFoodEarningsDisplay = mealSummary.rawFoodTotal * AppConfig.DINNER_FOOD_OUR_SHARE_PERCENT;
       } else {
-        commonPoolFoodContributionDisplay = mealSummary.rawFoodTotal;
+        directFoodEarningsDisplay = 0; // If not our food, no direct share
       }
-      commonPoolDrinkContributionDisplay = mealSummary.rawDrinkTotal * 0.25;
+      
+      // Common pool contributions (always 25% of raw food, and 25% of raw drinks)
+      commonPoolFoodContributionDisplay = mealSummary.rawFoodTotal * AppConfig.DINNER_FOOD_COMMON_POOL_PERCENT;
+      commonPoolDrinkContributionDisplay = mealSummary.rawDrinkTotal * AppConfig.DINNER_DRINK_COMMON_POOL_PERCENT;
+      
       totalCommonPoolDisplay = commonPoolFoodContributionDisplay + commonPoolDrinkContributionDisplay;
       ourShareFromCommonPoolDisplay = totalCommonPoolDisplay / effectiveWorkers;
     }
@@ -86,13 +85,13 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
         {isLunch ? (
           <>
             <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-              {tEarnings('lunch_food_base_income', { base: formatCurrency(LUNCH_FOOD_BASE_INCOME) })}
+              {tEarnings('lunch_food_base_income', { base: formatCurrency(AppConfig.LUNCH_FOOD_BASE_INCOME) })}
             </Typography>
-            {mealSummary.rawFoodTotal > LUNCH_FOOD_BASE_INCOME && (
+            {mealSummary.rawFoodTotal > AppConfig.LUNCH_FOOD_BASE_INCOME && (
               <Typography variant="caption" display="block">
                 {tEarnings('lunch_food_overage', {
-                  overage: formatCurrency(lunchFoodOverage),
-                  overageHalf: formatCurrency(lunchFoodOverage * 0.5)
+                  overage: formatCurrency(Math.max(0, mealSummary.rawFoodTotal - AppConfig.LUNCH_FOOD_BASE_INCOME)),
+                  overageHalf: formatCurrency(Math.max(0, mealSummary.rawFoodTotal - AppConfig.LUNCH_FOOD_BASE_INCOME) * AppConfig.LUNCH_FOOD_OVERAGE_SHARE_PERCENT)
                 })}
               </Typography>
             )}
@@ -102,14 +101,15 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
             <Typography variant="caption" display="block">
               {tEarnings('drink_calc_lunch', {
                 total: formatCurrency(mealSummary.rawDrinkTotal),
+                percentage: AppConfig.LUNCH_DRINK_SHARE_PERCENT * 100, // Pass percentage for display
                 share: formatCurrency(mealSummary.drinkEarnings)
               })}
             </Typography>
           </>
         ) : ( // Dinner earnings breakdown
           <>
-            {/* Direct Food Share (if our food) */}
-            {isOurFood && (
+            {/* Direct Food Share (if our food) - only display if it's non-zero */}
+            {isOurFood && directFoodEarningsDisplay > 0 && (
               <Typography variant="caption" display="block" sx={{ mt: 1 }}>
                 {tEarnings('dinner_food_direct_share', {
                   total: formatCurrency(mealSummary.rawFoodTotal),
