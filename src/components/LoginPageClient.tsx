@@ -1,18 +1,17 @@
-// src/components/LoginPageClient.tsx
-"use client"; // This directive MUST be at the very top to make it a Client Component
+"use client";
 
 import React, { useState } from 'react';
 import { Box, TextField, Button, Typography, CircularProgress, Alert } from '@mui/material';
-import { useTranslations } from 'next-intl'; // useTranslations can be used here
+import { useTranslations } from 'next-intl';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation'; // useRouter can be used here
+import { useRouter } from 'next/navigation';
 
 const LoginPageClient: React.FC = () => {
-  // useTranslations hook is correctly used in this Client Component
   const t = useTranslations('login');
-  const tGeneral = useTranslations(); // For general terms like "Login"
+  const tGeneral = useTranslations();
 
-  const [email, setEmail] = useState('');
+  // Change state variable from 'email' to 'username'
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,19 +23,18 @@ const LoginPageClient: React.FC = () => {
     setError(null);
 
     const result = await signIn('credentials', {
-      redirect: false, // Prevent automatic redirect
-      email,
+      redirect: false,
+      username, // Pass the 'username' state here
       password,
     });
 
     setLoading(false);
 
     if (result?.error) {
-      setError(tGeneral('auth.login_failed')); // Use general translation for login failure
+      setError(tGeneral('auth.login_failed'));
       console.error("Login failed:", result.error);
     } else {
-      // Redirect to the dashboard or a protected page on success
-      router.push('/en/dashboard'); // Adjust the redirect path as needed
+      router.push('/en/dashboard'); // Or dynamically determine locale
     }
   };
 
@@ -58,27 +56,31 @@ const LoginPageClient: React.FC = () => {
       }}
     >
       <Typography component="h1" variant="h5" gutterBottom>
-        {t('title')} {/* Use translation */}
+        {t('title')}
       </Typography>
-      {error && <Alert severity="error" sx={{ marginBottom: 2, width: '100%' }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ marginBottom: 2, width: '100%' }}>
+          {error}
+        </Alert>
+      )}
       <TextField
         margin="normal"
         required
         fullWidth
-        id="email"
-        label={t('email_label')} {/* Use translation */}
-        name="email"
-        autoComplete="email"
+        id="username" // Change ID from 'email' to 'username'
+        label={t('username_label')} // Use new translation key for label
+        name="username"
+        autoComplete="username" // Change autoComplete
         autoFocus
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        value={username}
+        onChange={(e) => setUsername(e.target.value)} // Update state setter
       />
       <TextField
         margin="normal"
         required
         fullWidth
         name="password"
-        label={t('password_label')} {/* Use translation */}
+        label={t('password_label')}
         type="password"
         id="password"
         autoComplete="current-password"
@@ -92,7 +94,7 @@ const LoginPageClient: React.FC = () => {
         sx={{ marginTop: 3, marginBottom: 2 }}
         disabled={loading}
       >
-        {loading ? <CircularProgress size={24} /> : tGeneral('auth.login_button')} {/* Use general translation */}
+        {loading ? <CircularProgress size={24} color="inherit" /> : t('login_button')}
       </Button>
     </Box>
   );

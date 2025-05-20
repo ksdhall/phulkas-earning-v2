@@ -1,131 +1,175 @@
+// src/components/DailySummaryCard.tsx
 "use client";
 
 import React from 'react';
-import { Card, CardContent, Typography, Box, Grid } from '@mui/material'; // Import Grid
+import { Box, Typography, Paper, Grid } from '@mui/material';
 import { useTranslations } from 'next-intl';
-
-// Import the DailyEarningsSummary type
-import { DailyEarningsSummary } from '@/lib/calculations';
-
+import { DailySummary, MealSummary } from '@/lib/calculations';
 
 interface DailySummaryCardProps {
-  date: string;
-  summary: DailyEarningsSummary;
+  date?: string;
+  summary: DailySummary | null;
 }
 
 const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) => {
-  const t = useTranslations('dashboard'); // Use dashboard translations for summary card
-  const tsEarnings = useTranslations('earnings_details'); // Translations for earnings breakdown
+  const t = useTranslations('dashboard');
+  const tEarnings = useTranslations('earnings_details');
+
+  if (!summary) {
+    return (
+      <Paper elevation={2} sx={{ p: 2, mb: 2, textAlign: 'center' }}>
+        <Typography variant="body1">{t('no_summary_data')}</Typography>
+      </Paper>
+    );
+  }
+
+  const { lunch, dinner, dayTotalEarnings } = summary;
+
+  // MODIFIED formatCurrency function for robustness
+  const formatCurrency = (amount: number | string) => {
+    let numericAmount: number;
+
+    if (typeof amount === 'string') {
+      // Remove any Yen symbols (¥), commas, or other non-numeric characters, then parse
+      const cleanedString = amount.replace(/[¥,]/g, '');
+      numericAmount = Number(cleanedString);
+    } else {
+      numericAmount = amount;
+    }
+
+    // Ensure it's a valid number, default to 0 if not
+    if (isNaN(numericAmount)) {
+      numericAmount = 0;
+    }
+
+    return `¥${numericAmount.toLocaleString()}`;
+  };
+
+  const renderMealDetails = (meal: 'lunch' | 'dinner', mealSummary: MealSummary) => {
+    const isLunch = meal === 'lunch';
+    const LUNCH_FOOD_BASE_INCOME = 8000;
+    const lunchFoodOverage = Math.max(0, mealSummary.rawFoodTotal - LUNCH_FOOD_BASE_INCOME);
+    
+    // For dinner, pull additional info for detailed breakdown display
+    const isOurFood = mealSummary.isOurFood ?? true;
+    const numberOfPeopleWorkingDinner = mealSummary.numberOfPeopleWorkingDinner ?? 1;
+    const effectiveWorkers = Math.max(1, numberOfPeopleWorkingDinner);
+
+    // These values are for display calculation breakdown, pulled from the logic in calculations.ts
+    let directFoodEarningsDisplay = 0;
+    let commonPoolFoodContributionDisplay = 0;
+    let commonPoolDrinkContributionDisplay = 0;
+    let totalCommonPoolDisplay = 0;
+    let ourShareFromCommonPoolDisplay = 0;
+
+    if (!isLunch) { // Dinner specific calculations for display breakdown
+      if (isOurFood) {
+        directFoodEarningsDisplay = mealSummary.rawFoodTotal * 0.75;
+        commonPoolFoodContributionDisplay = mealSummary.rawFoodTotal * 0.25;
+      } else {
+        commonPoolFoodContributionDisplay = mealSummary.rawFoodTotal;
+      }
+      commonPoolDrinkContributionDisplay = mealSummary.rawDrinkTotal * 0.25;
+      totalCommonPoolDisplay = commonPoolFoodContributionDisplay + commonPoolDrinkContributionDisplay;
+      ourShareFromCommonPoolDisplay = totalCommonPoolDisplay / effectiveWorkers;
+    }
+
+    return (
+      <Box sx={{ mt: 1 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{t(`${meal}_summary`)}</Typography>
+
+        {/* Raw Totals from Bills for clarity */}
+        <Typography variant="body2">{t('food_bills_total', { amount: formatCurrency(mealSummary.rawFoodTotal) })}</Typography>
+        <Typography variant="body2">{t('drink_bills_total', { amount: formatCurrency(mealSummary.rawDrinkTotal) })}</Typography>
+
+        {/* Earnings Calculation Breakdown */}
+        {isLunch ? (
+          <>
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              {tEarnings('lunch_food_base_income', { base: formatCurrency(LUNCH_FOOD_BASE_INCOME) })}
+            </Typography>
+            {mealSummary.rawFoodTotal > LUNCH_FOOD_BASE_INCOME && (
+              <Typography variant="caption" display="block">
+                {tEarnings('lunch_food_overage', {
+                  overage: formatCurrency(lunchFoodOverage),
+                  overageHalf: formatCurrency(lunchFoodOverage * 0.5)
+                })}
+              </Typography>
+            )}
+            <Typography variant="caption" display="block">
+              {tEarnings('total_lunch_food_income_share', { amount: formatCurrency(mealSummary.foodEarnings) })}
+            </Typography>
+            <Typography variant="caption" display="block">
+              {tEarnings('drink_calc_lunch', {
+                total: formatCurrency(mealSummary.rawDrinkTotal),
+                share: formatCurrency(mealSummary.drinkEarnings)
+              })}
+            </Typography>
+          </>
+        ) : ( // Dinner earnings breakdown
+          <>
+            {/* Direct Food Share (if our food) */}
+            {isOurFood && (
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                {tEarnings('dinner_food_direct_share', {
+                  total: formatCurrency(mealSummary.rawFoodTotal),
+                  share: formatCurrency(directFoodEarningsDisplay)
+                })}
+              </Typography>
+            )}
+
+            {/* Common Pool Contributions */}
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              {tEarnings('dinner_common_pool_contrib_food', { amount: formatCurrency(commonPoolFoodContributionDisplay) })}
+            </Typography>
+            <Typography variant="caption" display="block">
+              {tEarnings('dinner_common_pool_contrib_drinks', { amount: formatCurrency(commonPoolDrinkContributionDisplay) })}
+            </Typography>
+            <Typography variant="caption" display="block">
+              {tEarnings('total_common_pool', { amount: formatCurrency(totalCommonPoolDisplay) })}
+            </Typography>
+            <Typography variant="caption" display="block">
+              {tEarnings('our_common_pool_share', {
+                amount: formatCurrency(ourShareFromCommonPoolDisplay),
+                workers: effectiveWorkers
+              })}
+            </Typography>
+          </>
+        )}
+
+        {/* Phulkas Total Earnings for the Meal */}
+        <Typography variant="body1" color="primary" sx={{ fontWeight: 'bold', mt: 1 }}>
+          {t(`phulkas_${meal}_earnings`, { amount: formatCurrency(mealSummary.phulkasEarnings) })}
+        </Typography>
+      </Box>
+    );
+  };
 
   return (
-    <Card sx={{ mt: 3, mb: 3 }}>
-      <CardContent>
-        <Typography variant="h5" gutterBottom>
-          {t('summary_for_date', { date })} {/* Use translation for date summary title */}
+    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      {date && (
+        <Typography variant="h6" gutterBottom>
+          {t('summary_for_date', { date: date })}
         </Typography>
-        <Grid container spacing={2}>
-          {/* Lunch Summary */}
-          {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12} sm={6}> {/* Removed item prop, using breakpoint props directly */}
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              {t('lunch_summary')} {/* Use translation */}
-            </Typography>
-            {summary.lunch.foodTotal > 0 || summary.lunch.drinkTotal > 0 ? (
-                <Box sx={{ fontSize: '0.9rem' }}>
-                    <Typography variant="body2" display="block">{t('food_total', { amount: summary.lunch.foodTotal.toFixed(2) })}</Typography>
-                     {summary.lunch.foodTotal > 0 && (
-                         <Box sx={{ ml: 1, fontSize: '0.8rem', color: 'text.secondary' }}>
-                             <Typography variant="caption" display="block">
-                                 {tsEarnings('lunch_food_base', { base: summary.lunch.foodBreakdown.base.toFixed(2) })}
-                                 {summary.lunch.foodBreakdown.overage > 0 && (
-                                     tsEarnings('lunch_food_overage', {
-                                         overage: summary.lunch.foodBreakdown.overage.toFixed(2),
-                                         overageHalf: summary.lunch.foodBreakdown.overageHalf.toFixed(2)
-                                     })
-                                 )}
-                                  = ¥{summary.lunch.foodEarnings.toFixed(2)}
-                             </Typography>
-                         </Box>
-                      )}
-                    <Typography variant="body2" display="block">{t('drink_total', { amount: summary.lunch.drinkTotal.toFixed(2) })}</Typography>
-                     {summary.lunch.drinkTotal > 0 && (
-                          <Box sx={{ ml: 1, fontSize: '0.8rem', color: 'text.secondary' }}>
-                               <Typography variant="caption" display="block">
-                                    {tsEarnings('lunch_drink_calc', {
-                                       total: summary.lunch.drinkBreakdown.total.toFixed(2),
-                                       share: summary.lunch.drinkBreakdown.share.toFixed(2)
-                                   })}
-                               </Typography>
-                          </Box>
-                       )}
-                    <Typography variant="body1" color="primary" sx={{mt: 0.5}}>
-                       {t('phulkas_lunch_earnings', { amount: summary.lunch.totalEarnings.toFixed(2) })}
-                    </Typography>
-                </Box>
-            ) : (
-                <Typography variant="body2" color="text.secondary">{t('no_lunch_entries')}</Typography>
-            )}
-          </Grid>
+      )}
 
-          {/* Dinner Summary */}
-          {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12} sm={6}> {/* Removed item prop, using breakpoint props directly */}
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              {t('dinner_summary')} {/* Use translation */}
-            </Typography>
-             {summary.dinner.foodTotal > 0 || summary.dinner.drinkTotal > 0 ? (
-                 <Box sx={{ fontSize: '0.9rem' }}>
-                    <Typography variant="body2" display="block">{t('food_total', { amount: summary.dinner.foodTotal.toFixed(2) })}</Typography>
-                     {summary.dinner.foodTotal > 0 && (
-                         <Box sx={{ ml: 1, fontSize: '0.8rem', color: 'text.secondary' }}>
-                              <Typography variant="caption" display="block">
-                                   Total Dinner Food: ¥{summary.dinner.foodBreakdown.totalDinnerFood.toFixed(2)}
-                              </Typography>
-                              {summary.dinner.foodBreakdown.ourDinnerFoodSales > 0 && (
-                                  <Typography variant="caption" display="block">
-                                      Our Sales (75%): ¥{summary.dinner.foodBreakdown.ourDinnerFoodSales.toFixed(2)} * 0.75 = ¥{summary.dinner.foodBreakdown.ourFoodSalesShare.toFixed(2)}
-                                  </Typography>
-                              )}
-                              {summary.dinner.foodBreakdown.totalFoodShiftSharePool > 0 && (
-                                   <Typography variant="caption" display="block">
-                                       Shift Pool (25%): ¥{summary.dinner.foodBreakdown.totalFoodShiftSharePool.toFixed(2)} / {summary.dinner.foodBreakdown.numberOfPeopleWorking} = ¥{summary.dinner.foodBreakdown.ourShiftShare.toFixed(2)} (Our Share)
-                                   </Typography>
-                              )}
-                         </Box>
-                      )}
-                   <Typography variant="body2" display="block">{t('drink_total', { amount: summary.dinner.drinkTotal.toFixed(2) })}</Typography>
-                    {summary.dinner.drinkTotal > 0 && (
-                         <Box sx={{ ml: 1, fontSize: '0.8rem', color: 'text.secondary' }}>
-                              <Typography variant="caption" display="block">
-                                   {tsEarnings('dinner_drink_calc', {
-                                      total: summary.dinner.drinkBreakdown.total.toFixed(2),
-                                      share: summary.dinner.drinkBreakdown.share.toFixed(2)
-                                  })}
-                              </Typography>
-                          </Box>
-                       )}
-                   <Typography variant="body1" color="primary" sx={{mt: 0.5}}>
-                      {t('phulkas_dinner_earnings', { amount: summary.dinner.totalEarnings.toFixed(2) })}
-                   </Typography>
-               </Box>
-             ) : (
-                 <Typography variant="body2" color="text.secondary">{t('no_dinner_entries')}</Typography>
-             )}
-          </Grid>
-
-          {/* Day Total Earnings */}
-           {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12}> {/* Removed item prop, using breakpoint prop directly */}
-            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-              {t('day_total_earnings_header')} {/* Use translation */}
-            </Typography>
-            <Typography variant="h5" color="secondary">
-              ¥{summary.dayTotalEarnings.toFixed(2)}
-            </Typography>
-          </Grid>
+      <Grid container spacing={3}>
+        <Grid item xs={12} sm={6}>
+          {renderMealDetails('lunch', lunch)}
         </Grid>
-      </CardContent>
-    </Card>
+
+        <Grid item xs={12} sm={6}>
+          {renderMealDetails('dinner', dinner)}
+        </Grid>
+
+        {/* Day Total Earnings */}
+        <Grid item xs={12} sx={{ mt: 2 }}>
+          <Typography variant="h6" color="secondary" sx={{ fontWeight: 'bold', borderTop: '1px solid #eee', pt: 1 }}>
+            {t('day_total_earnings_header')}: {formatCurrency(dayTotalEarnings)}
+          </Typography>
+        </Grid>
+      </Grid>
+    </Paper>
   );
 };
 

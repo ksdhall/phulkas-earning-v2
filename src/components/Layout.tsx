@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useSession, signOut } from 'next-auth/react';
 import Button from '@mui/material/Button';
-import LanguageSwitcher from './LanguageSwitcher'; // Import the updated LanguageSwitcher
-import ThemeToggleButton from './ThemeToggleButton'; // Assuming this component exists
+import LanguageSwitcher from './LanguageSwitcher';
+import ThemeToggleButton from './ThemeToggleButton';
 
 interface LayoutProps {
   children: ReactNode;
@@ -31,13 +31,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {isAuthenticated && (
             <>
-              <Button color="inherit" component={Link} href="/en/dashboard">
+              <Button color="inherit" component={Link} href={`/${session?.user?.locale || 'en'}/dashboard`}> {/* Use session locale for links */}
                 {t('dashboard_link')}
               </Button>
-              <Button color="inherit" component={Link} href="/en/add-bill">
+              {/* REMOVED: Add Bill link */}
+              {/* <Button color="inherit" component={Link} href="/en/add-bill">
                 {t('add_bill_link')}
-              </Button>
-              <Button color="inherit" component={Link} href="/en/summary">
+              </Button> */}
+              <Button color="inherit" component={Link} href={`/${session?.user?.locale || 'en'}/summary`}> {/* Use session locale for links */}
                 {t('summary_link')}
               </Button>
                {/* Removed the user email display for brevity, add back if needed */}
@@ -47,10 +48,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </>
           )}
 
-          {/* Language Switcher - now handles locale internally */}
           <LanguageSwitcher />
-
-          {/* Theme Toggle Button */}
           <ThemeToggleButton />
         </Toolbar>
       </AppBar>

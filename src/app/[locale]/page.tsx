@@ -1,22 +1,15 @@
-// src/app/[locale]/page.tsx
+// In your page.tsx
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
+import { redirect } from "next/navigation";
+import LoginPageClient from "@/components/LoginPageClient";
 
-import { redirect } from 'next/navigation';
-import { auth } from '@/auth'; // Assuming your auth function is exported from auth.ts
-// Import the new Client Component
-import LoginPageClient from '@/components/LoginPageClient';
-
-// This is an async Server Component
 export default async function LoginPage() {
-  // Check if the user is already authenticated on the server side
-  const session = await auth();
+  const session = await getServerSession(authOptions);
 
-  // If authenticated, redirect to the dashboard
   if (session) {
-    console.log("LoginPage (Server): User authenticated, redirecting to dashboard.");
-    redirect('/en/dashboard'); // Adjust the redirect path and locale as needed
+    redirect("/en/dashboard");
   }
 
-  console.log("LoginPage (Server): User not authenticated, rendering login form.");
-  // Render the Client Component which handles the UI and client-side logic
   return <LoginPageClient />;
 }

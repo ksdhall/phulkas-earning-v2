@@ -3,48 +3,46 @@
 import React from 'react';
 import { Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material';
 import { useTranslations } from 'next-intl';
-// Import hooks for routing and locale from next/navigation
 import { useParams, useRouter, usePathname } from 'next/navigation';
-// Import locales from your routing file
 import { routing } from '@/i18n/routing';
 
-// Remove the props interface as locale and handler will be internal
-// interface LanguageSwitcherProps {
-//   onLocaleChange: (event: SelectChangeEvent<string>) => void;
-//   locale: string;
-// }
-
-// Component no longer accepts props
 const LanguageSwitcher: React.FC = () => {
   const t = useTranslations('language_switcher');
   const router = useRouter();
-  const pathname = usePathname(); // Get the current pathname
-  const params = useParams(); // Get route params, including locale
+  const pathname = usePathname();
+  const params = useParams();
 
-  // Get the current locale from the params
   const currentLocale = params.locale as string;
-
-  // Access the locales array from the imported routing object
   const locales = routing.locales;
 
-  // Handle locale change internally
   const handleLocaleChange = (event: SelectChangeEvent<string>) => {
     const newLocale = event.target.value;
-    // Construct the new URL with the selected locale
-    // This logic might need refinement based on your specific routing setup
     const newPath = `/${newLocale}${pathname.startsWith(`/${currentLocale}`) ? pathname.substring(currentLocale.length + 1) : pathname}`;
     router.push(newPath);
   };
 
   return (
-    <FormControl size="small" sx={{ minWidth: 120 }}>
-      <InputLabel id="language-switcher-label">{t('label')}</InputLabel>
+    <FormControl size="small" sx={{ minWidth: 120, '& .MuiInputLabel-root': { color: 'inherit' }, '& .MuiSelect-icon': { color: 'inherit' } }}>
+      <InputLabel id="language-switcher-label" color="primary" sx={{ color: 'inherit' }}>{t('label')}</InputLabel>
       <Select
         labelId="language-switcher-label"
         id="language-switcher"
-        value={currentLocale} // Use the current locale from params
+        value={currentLocale}
         label={t('label')}
-        onChange={handleLocaleChange} // Use the internal handler
+        onChange={handleLocaleChange}
+        color="primary" // Ensures the select component's primary color is used
+        sx={{
+          color: 'inherit', // Inherit text color from parent (AppBar's Toolbar)
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'inherit', // Inherit border color
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'inherit', // Inherit border color on hover
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'inherit', // Inherit border color when focused
+          },
+        }}
       >
         {locales.map((loc) => (
           <MenuItem key={loc} value={loc}>

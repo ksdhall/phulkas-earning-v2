@@ -1,228 +1,250 @@
 // src/lib/calculations.ts
-// This file contains functions for calculating earnings summaries.
+import { Bill } from '@/types/Bill';
+import { format, isSameDay } from 'date-fns';
 
-// Import the Bill interface
-import { Bill } from '@/types/Bill'; // Assuming Bill interface is here
-
-// Import MealType Enum directly from Prisma client
-import { MealType } from '@prisma/client';
-
-// --- Export the DailyEarningsSummary interface ---
-export interface DailyEarningsSummary {
-  lunch: {
-    foodTotal: number;
-    drinkTotal: number;
-    foodEarnings: number; // Earnings from lunch food (base + overage half)
-    drinkEarnings: number; // Earnings from lunch drinks (25% share)
-    totalEarnings: number; // Total lunch earnings
-    foodBreakdown: {
-      base: number;
-      overage: number;
-      overageHalf: number;
-    };
-    drinkBreakdown: {
-        total: number;
-        share: number;
-    };
-  };
-  dinner: {
-    foodTotal: number; // Total food sales for dinner shift
-    drinkTotal: number; // Total drink sales for dinner shift
-    foodEarnings: number; // Our total earnings from dinner food (our sales share + shift share)
-    drinkEarnings: number; // Earnings from dinner drinks (25% share)
-    totalEarnings: number; // Total dinner earnings
-     // New breakdown for dinner food earnings
-     foodBreakdown: {
-        totalDinnerFood: number;
-        ourDinnerFoodSales: number; // Dinner food sales specifically marked as 'ours'
-        ourFoodSalesShare: number; // 75% of ourDinnerFoodSales
-        totalFoodShiftSharePool: number; // 25% of totalDinnerFood
-        ourShiftShare: number; // Our share of the 25% pool
-        numberOfPeopleWorking: number; // Number of people used for shift share calculation
-     };
-    drinkBreakdown: {
-        total: number;
-        share: number;
-      };
-  };
-  dayTotalEarnings: number; // Total earnings for this specific day
+// Define the updated structure of the Daily/Range Summary
+export interface MealSummary {
+  rawFoodTotal: number;
+  rawDrinkTotal: number;
+  
+  // For Lunch: foodEarnings is direct share, drinkEarnings is direct share
+  // For Dinner: foodEarnings represents our direct 75% share if applicable (0 otherwise)
+  //             drinkEarnings will store our share from the common pool (food+drinks combined)
+  phulkasEarnings: number; // The final total from all sources (direct + common pool)
+  
+  // Additional fields needed for displaying the breakdown in DailySummaryCard
+  isOurFood?: boolean; // Optional, only relevant for Dinner
+  numberOfPeopleWorkingDinner?: number; // Optional, only relevant for Dinner
 }
 
-// --- Updated structure of the range summary ---
-// Export the RangeSummary interface as well if it's used elsewhere
-export interface RangeSummary {
-    totalFood: number; // Overall total food for the range
-    totalDrinks: number; // Overall total drinks for the range
-    // --- Breakdown by meal type for the range ---
-    totalLunchFood: number;
-    totalLunchDrinks: number;
-    totalDinnerFood: number;
-    totalDinnerDrinks: number;
-    // --- Corrected overall total earnings for the range (Sum of Daily Totals) ---
-    totalPhulkasEarnings: number;
+// Helper to get a default empty meal summary
+const getDefaultMealSummary = (): MealSummary => ({
+  rawFoodTotal: 0,
+  rawDrinkTotal: 0,
+  foodEarnings: 0,
+  drinkEarnings: 0,
+  phulkasEarnings: 0,
+});
+
+// Helper to get a default empty daily summary
+export interface DailySummary {
+  lunch: MealSummary;
+  dinner: MealSummary;
+  dayTotalEarnings: number;
 }
 
-// Import date-fns for date handling
-import { format, parseISO, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
+const getDefaultDailySummary = (): DailySummary => ({
+  lunch: getDefaultMealSummary(),
+  dinner: getDefaultMealSummary(),
+  dayTotalEarnings: 0,
+});
 
+const LUNCH_FOOD_BASE_INCOME = 8000;
 
-// --- Function to calculate daily earnings summary for a list of bills for a single day ---
-// Updated to use mealType, isOurFood, and numberOfPeopleWorkingDinner
-// FIX: Corrected Lunch Earnings calculation
-export const calculateDailyEarnings = (billsForDay: Bill[]): DailyEarningsSummary => {
-  let lunchFoodTotal = 0;
-  let lunchDrinkTotal = 0;
-  let dinnerFoodTotal = 0; // Total food sales for dinner shift
-  let dinnerDrinkTotal = 0; // Total drink sales for dinner shift
-  let ourDinnerFoodSales = 0; // Dinner food sales specifically marked as 'ours'
-  let numberOfPeopleWorkingDinner = 1; // Default number of people working dinner to 1
+// Calculation for Lunch Meal Summary
+const calculateLunchMealSummary = (foodAmount: number, drinkAmount: number): MealSummary => {
+  const foodOverage = Math.max(0, foodAmount - LUNCH_FOOD_BASE_INCOME);
+  const foodEarnings = LUNCH_FOOD_BASE_INCOME + (foodOverage * 0.5);
 
-  // Group bills by meal type and collect number of people for dinner
-  const lunchBills = billsForDay.filter(bill => bill.mealType === 'lunch'); // Use string representation on client
-  const dinnerBills = billsForDay.filter(bill => bill.mealType === 'dinner'); // Use string representation on client
-
-
-  // Calculate totals for Lunch
-  lunchBills.forEach(bill => {
-      lunchFoodTotal += bill.foodAmount;
-      lunchDrinkTotal += bill.drinkAmount;
-  });
-
-  // Calculate totals and our sales for Dinner
-  dinnerBills.forEach(bill => {
-      dinnerFoodTotal += bill.foodAmount;
-      dinnerDrinkTotal += bill.drinkAmount;
-      if (bill.isOurFood) { // isOurFood is boolean from the API/db
-          ourDinnerFoodSales += bill.foodAmount;
-      }
-       // Take the number of people from the first dinner bill found, assuming consistency
-       if (bill.numberOfPeopleWorkingDinner !== undefined && bill.numberOfPeopleWorkingDinner !== null && bill.numberOfPeopleWorkingDinner > 0) {
-           numberOfPeopleWorkingDinner = bill.numberOfPeopleWorkingDinner;
-       }
-  });
-
-
-  // --- Earnings Calculation Logic (Matches DailySummaryCard logic) ---
-
-  // Lunch Calculation
-  const lunchBase = 8000; // Assuming a base amount
-  const lunchFoodOverage = Math.max(0, lunchFoodTotal - lunchBase);
-  // FIX: Lunch food earnings are 0 if no lunch sales, otherwise base + half overage
-  const lunchFoodEarnings = lunchFoodTotal > 0 ? lunchBase + lunchFoodOverage / 2 : 0;
-  const lunchDrinkShare = lunchDrinkTotal * 0.25;
-  const lunchTotalEarnings = lunchFoodEarnings + lunchDrinkShare;
-
-
-  // Dinner Calculation (Updated Food Logic)
-  const dinnerDrinkShare = dinnerDrinkTotal * 0.25; // Drinks share remains the same
-
-  // New Dinner Food Calculation
-  const ourFoodSalesShare = ourDinnerFoodSales * 0.75; // 75% of our dinner food sales
-  const totalDinnerFoodShiftSharePool = dinnerFoodTotal * 0.25; // 25% of total dinner food sales
-  // Calculate our share of the shift pool - handle division by zero
-  const ourShiftShare = numberOfPeopleWorkingDinner > 0 ? totalDinnerFoodShiftSharePool / numberOfPeopleWorkingDinner : 0;
-
-  // Total earnings from dinner food
-  const totalDinnerFoodEarnings = ourFoodSalesShare + ourShiftShare;
-
-  // Total Dinner Earnings
-  const dinnerTotalEarnings = totalDinnerFoodEarnings + dinnerDrinkShare;
-
-  // Total Day Earnings
-  const dayTotalEarnings = lunchTotalEarnings + dinnerTotalEarnings;
-  // --- End Earnings Calculation Logic ---
-
+  const drinkEarnings = drinkAmount * 0.5; // Drinks always 50% for Phulkas for lunch
+  const phulkasEarnings = foodEarnings + drinkEarnings;
 
   return {
-    lunch: {
-      foodTotal: lunchFoodTotal,
-      drinkTotal: lunchDrinkTotal,
-      foodEarnings: lunchFoodEarnings,
-      drinkEarnings: lunchDrinkShare,
-      totalEarnings: lunchTotalEarnings,
-      foodBreakdown: { base: lunchBase, overage: lunchFoodOverage, overageHalf: lunchFoodOverage / 2 },
-      drinkBreakdown: { total: lunchDrinkTotal, share: lunchDrinkShare },
-    },
-    dinner: {
-      foodTotal: dinnerFoodTotal,
-      drinkTotal: dinnerDrinkTotal,
-      foodEarnings: totalDinnerFoodEarnings, // This is now our calculated total dinner food earnings
-      drinkEarnings: dinnerDrinkShare,
-      totalEarnings: dinnerTotalEarnings,
-       // Updated dinner food breakdown
-       foodBreakdown: {
-           totalDinnerFood: dinnerFoodTotal,
-           ourDinnerFoodSales: ourDinnerFoodSales,
-           ourFoodSalesShare: ourFoodSalesShare,
-           totalFoodShiftSharePool: totalDinnerFoodShiftSharePool,
-           ourShiftShare: ourShiftShare,
-           numberOfPeopleWorking: numberOfPeopleWorkingDinner, // Include the number used
-        },
-      drinkBreakdown: {
-        total: dinnerDrinkTotal,
-        share: dinnerDrinkShare,
-      },
-    },
-    dayTotalEarnings: dayTotalEarnings,
+    rawFoodTotal: foodAmount,
+    rawDrinkTotal: drinkAmount,
+    foodEarnings: foodEarnings,
+    drinkEarnings: drinkEarnings,
+    phulkasEarnings: phulkasEarnings,
+  };
+};
+
+// Calculation for Dinner Meal Summary (UPDATED LOGIC based on user's detailed example)
+const calculateDinnerMealSummary = (foodAmount: number, drinkAmount: number, isOurFood: boolean, numberOfPeopleWorkingDinner: number): MealSummary => {
+  const effectiveWorkers = Math.max(1, numberOfPeopleWorkingDinner); // Ensure no division by zero
+
+  let directFoodEarnings = 0; // Our direct 75% share if 'Is Our Food?' is Yes
+  let commonPoolFoodContribution = 0; // Food amount contributing to common pool
+  let commonPoolDrinkContribution = drinkAmount * 0.25; // Drinks always contribute 25% to common pool for dinner
+
+  if (isOurFood) {
+    directFoodEarnings = foodAmount * 0.75;
+    commonPoolFoodContribution = foodAmount * 0.25;
+  } else {
+    // If not our food, the entire food bill goes to the common pool
+    commonPoolFoodContribution = foodAmount;
+  }
+
+  const totalCommonPool = commonPoolFoodContribution + commonPoolDrinkContribution;
+  const ourShareFromCommonPool = totalCommonPool / effectiveWorkers;
+
+  const phulkasEarnings = directFoodEarnings + ourShareFromCommonPool;
+
+  return {
+    rawFoodTotal: foodAmount,
+    rawDrinkTotal: drinkAmount,
+    foodEarnings: directFoodEarnings, // This now represents our direct 75% for "our food", 0 otherwise.
+    drinkEarnings: ourShareFromCommonPool, // This now represents our share from the common pool (food+drinks combined)
+    phulkasEarnings: phulkasEarnings,
+    isOurFood: isOurFood, // Pass these through for display in DailySummaryCard
+    numberOfPeopleWorkingDinner: numberOfPeopleWorkingDinner, // Pass these through for display
   };
 };
 
 
-// --- Function to calculate range summary for a list of bills across a range ---
-// This function sums the 'dayTotalEarnings' of each day's summary.
-// Ensure this function uses the updated calculateDailyEarnings
-// FIX: Ensure this function correctly calculates and returns range totals
-export const calculateRangeSummary = (billsInRange: Bill[]): RangeSummary => {
-    let totalFoodAmountForRange = 0;
-    let totalDrinkAmountForRange = 0;
-    let totalLunchFoodForRange = 0;
-    let totalLunchDrinksForRange = 0;
-    let totalDinnerFoodForRange = 0;
-    let totalDinnerDrinksForRange = 0;
-    let totalPhulkasEarningsForRange = 0; // Initialize total earnings for the range
+// Function to calculate daily earnings for a list of bills (aggregating detailed MealSummary)
+export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
+  const dailySummary: DailySummary = getDefaultDailySummary();
+
+  // Temporary storage for dinner aggregation
+  let tempDinnerFoodTotal = 0;
+  let tempDinnerDrinkTotal = 0;
+  let tempDinnerIsOurFood: boolean = true; // Default or take from first bill
+  let tempDinnerNumWorkers: number = 1; // Default or take from first bill
+
+  bills.forEach(bill => {
+    if (bill.mealType === 'lunch') {
+      const mealSummary = calculateLunchMealSummary(bill.foodAmount, bill.drinkAmount);
+      dailySummary.lunch.rawFoodTotal += mealSummary.rawFoodTotal;
+      dailySummary.lunch.rawDrinkTotal += mealSummary.rawDrinkTotal;
+      dailySummary.lunch.foodEarnings += mealSummary.foodEarnings;
+      dailySummary.lunch.drinkEarnings += mealSummary.drinkEarnings;
+      dailySummary.lunch.phulkasEarnings += mealSummary.phulkasEarnings;
+    } else if (bill.mealType === 'dinner') {
+      // Aggregate raw totals for dinner first
+      tempDinnerFoodTotal += bill.foodAmount;
+      tempDinnerDrinkTotal += bill.drinkAmount;
+      // For `isOurFood` and `numberOfPeopleWorkingDinner`,
+      // we'll use the values from the last processed dinner bill.
+      // If consistency is required across multiple dinner bills on a day,
+      // a more complex aggregation rule might be needed (e.g., majority, average, or specific flagging).
+      tempDinnerIsOurFood = bill.isOurFood ?? true;
+      tempDinnerNumWorkers = bill.numberOfPeopleWorkingDinner ?? 1;
+    }
+  });
+
+  // After iterating through all bills, calculate the aggregated dinner summary once
+  if (tempDinnerFoodTotal > 0 || tempDinnerDrinkTotal > 0) {
+    const aggregatedDinnerSummary = calculateDinnerMealSummary(
+      tempDinnerFoodTotal,
+      tempDinnerDrinkTotal,
+      tempDinnerIsOurFood,
+      tempDinnerNumWorkers
+    );
+    dailySummary.dinner.rawFoodTotal = aggregatedDinnerSummary.rawFoodTotal;
+    dailySummary.dinner.rawDrinkTotal = aggregatedDinnerSummary.rawDrinkTotal;
+    dailySummary.dinner.foodEarnings = aggregatedDinnerSummary.foodEarnings;
+    dailySummary.dinner.drinkEarnings = aggregatedDinnerSummary.drinkEarnings;
+    dailySummary.dinner.phulkasEarnings = aggregatedDinnerSummary.phulkasEarnings;
+    dailySummary.dinner.isOurFood = aggregatedDinnerSummary.isOurFood;
+    dailySummary.dinner.numberOfPeopleWorkingDinner = aggregatedDinnerSummary.numberOfPeopleWorkingDinner;
+  }
+
+  dailySummary.dayTotalEarnings = dailySummary.lunch.phulkasEarnings + dailySummary.dinner.phulkasEarnings;
+  return dailySummary;
+};
+
+// Function to calculate summary for a range of bills (this now uses calculateDailyEarnings which aggregates daily)
+export const calculateRangeSummary = (bills: Bill[]): DailySummary => {
+  // If you need a single summary for a range (not day-by-day), this function would need to aggregate
+  // all bills in the range into a single set of raw totals, then apply calculations.
+  // For now, it delegates to calculateDailyEarnings, which effectively treats the *entire range*
+  // as a single "day" for calculation purposes if not further broken down.
+  // To get a true range summary, you would sum up the .phulkasEarnings from each day calculated by calculateDailySummariesForRange.
+  // Let's adjust this to make it a true range summary
+  
+  let rangeFoodTotal = 0;
+  let rangeDrinkTotal = 0;
+  let rangePhulkasEarnings = 0;
+
+  const dailySummaries = calculateDailySummariesForRange(bills);
+
+  dailySummaries.forEach(dailyEntry => {
+    rangeFoodTotal += dailyEntry.summary.lunch.rawFoodTotal + dailyEntry.summary.dinner.rawFoodTotal;
+    rangeDrinkTotal += dailyEntry.summary.lunch.rawDrinkTotal + dailyEntry.summary.dinner.rawDrinkTotal;
+    rangePhulkasEarnings += dailyEntry.summary.dayTotalEarnings;
+  });
+
+  // For range summary, we don't need detailed meal summaries directly, but total earnings
+  const summaryForRange: DailySummary = {
+    lunch: { // Placeholder or combined totals for range
+      rawFoodTotal: rangeFoodTotal,
+      rawDrinkTotal: rangeDrinkTotal,
+      foodEarnings: 0, // Not applicable for range detailed breakdown in this structure
+      drinkEarnings: 0, // Not applicable
+      phulkasEarnings: 0 // Not applicable
+    },
+    dinner: { // Placeholder or combined totals for range
+      rawFoodTotal: 0,
+      rawDrinkTotal: 0,
+      foodEarnings: 0, // Not applicable
+      drinkEarnings: 0, // Not applicable
+      phulkasEarnings: 0 // Not applicable
+    },
+    dayTotalEarnings: rangePhulkasEarnings // This is the total earnings for the entire range
+  };
+
+  return summaryForRange;
+};
 
 
-    // Group bills by date first to calculate daily summaries
-    const billsByDate: { [key: string]: Bill[] } = {};
-    billsInRange.forEach(bill => {
-        // Use format to get a consistent date string key (e.g., 'yyyy-MM-dd')
-        const dateKey = format(bill.date instanceof Date ? bill.date : new Date(bill.date), 'yyyy-MM-dd');
-        if (!billsByDate[dateKey]) {
-            billsByDate[dateKey] = [];
-        }
-        billsByDate[dateKey].push(bill);
+// Function to calculate daily summaries for a range, used in BillList/Summary Tables
+export const calculateDailySummariesForRange = (bills: Bill[]): { date: string; summary: DailySummary }[] => {
+  const dailySummariesMap: { [key: string]: {
+    lunch: MealSummary,
+    dinnerRawFoodTotal: number,
+    dinnerRawDrinkTotal: number,
+    // Store last seen values for isOurFood and numWorkers for daily dinner aggregation
+    lastDinnerIsOurFood: boolean,
+    lastDinnerNumWorkers: number
+  } } = {};
 
-         // Also sum up overall food and drink totals for the range summary
-        totalFoodAmountForRange += bill.foodAmount;
-        totalDrinkAmountForRange += bill.drinkAmount;
+  bills.forEach(bill => {
+    const billDate = format(bill.date, 'yyyy-MM-dd');
+    if (!dailySummariesMap[billDate]) {
+      dailySummariesMap[billDate] = {
+        lunch: getDefaultMealSummary(),
+        dinnerRawFoodTotal: 0,
+        dinnerRawDrinkTotal: 0,
+        lastDinnerIsOurFood: true, // Default
+        lastDinnerNumWorkers: 1 // Default
+      };
+    }
 
-        // Use string value 'lunch'/'dinner' as processed on client side
-        if (bill.mealType === 'lunch') {
-            totalLunchFoodForRange += bill.foodAmount;
-            totalLunchDrinksForRange += bill.drinkAmount;
-        } else if (bill.mealType === 'dinner') { // Assume 'dinner' if not 'lunch'
-            totalDinnerFoodForRange += bill.foodAmount;
-            totalDinnerDrinksForRange += bill.drinkAmount;
-        }
+    const currentDayData = dailySummariesMap[billDate];
+
+    if (bill.mealType === 'lunch') {
+      const mealSummary = calculateLunchMealSummary(bill.foodAmount, bill.drinkAmount);
+      currentDayData.lunch.rawFoodTotal += mealSummary.rawFoodTotal;
+      currentDayData.lunch.rawDrinkTotal += mealSummary.rawDrinkTotal;
+      currentDayData.lunch.foodEarnings += mealSummary.foodEarnings;
+      currentDayData.lunch.drinkEarnings += mealSummary.drinkEarnings;
+      currentDayData.lunch.phulkasEarnings += mealSummary.phulkasEarnings;
+    } else if (bill.mealType === 'dinner') {
+      currentDayData.dinnerRawFoodTotal += bill.foodAmount;
+      currentDayData.dinnerRawDrinkTotal += bill.drinkAmount;
+      // Update with the last bill's values for these parameters
+      currentDayData.lastDinnerIsOurFood = bill.isOurFood ?? true;
+      currentDayData.lastDinnerNumWorkers = bill.numberOfPeopleWorkingDinner ?? 1;
+    }
+  });
+
+  // Convert map to sorted array and finalize dinner calculations
+  return Object.keys(dailySummariesMap)
+    .sort((a, b) => b.localeCompare(a)) // Sort by date descending
+    .map(date => {
+      const dayData = dailySummariesMap[date];
+      const finalizedDinnerSummary = calculateDinnerMealSummary(
+        dayData.dinnerRawFoodTotal,
+        dayData.dinnerRawDrinkTotal,
+        dayData.lastDinnerIsOurFood,
+        dayData.lastDinnerNumWorkers
+      );
+
+      const dailySummary: DailySummary = {
+        lunch: dayData.lunch,
+        dinner: finalizedDinnerSummary,
+        dayTotalEarnings: dayData.lunch.phulkasEarnings + finalizedDinnerSummary.phulkasEarnings
+      };
+      return { date, summary: dailySummary };
     });
-
-    // Calculate daily summaries for each day that has bills and sum their total earnings
-    Object.keys(billsByDate).forEach(dateKey => {
-        const billsForDay = billsByDate[dateKey];
-        // Call calculateDailyEarnings for each day
-        // The numberOfPeopleWorkingDinner will be taken from the bill object within calculateDailyEarnings
-        const dailySummary = calculateDailyEarnings(billsForDay);
-        totalPhulkasEarningsForRange += dailySummary.dayTotalEarnings; // Sum the daily total earnings
-    });
-
-
-    return {
-        totalFood: totalFoodAmountForRange,
-        totalDrinks: totalDrinkAmountForRange,
-        totalLunchFood: totalLunchFoodForRange,
-        totalLunchDrinks: totalLunchDrinksForRange,
-        totalDinnerFood: totalDinnerFoodForRange,
-        totalDinnerDrinks: totalDinnerDrinksForRange,
-        totalPhulkasEarnings: totalPhulkasEarningsForRange,
-    };
 };

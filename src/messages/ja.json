@@ -1,91 +1,130 @@
 {
-  "nav": {
-    "app_name": "プルカアプリ",
-    "dashboard": "ダッシュボード",
-    "summary": "サマリー",
-    "logged_in_as": "{name}としてログイン中",
-    "logout": "ログアウト",
-    "login": "ログイン"
-  },
-  "dashboard": {
-    "title": "ダッシュボード",
-    "todays_entries": "{date}のエントリー",
-    "add_bill_entry": "請求エントリーを追加",
-    "no_entries_today": "この日付のエントリーはありません。",
-    "summary_for_day": "{date}のサマリー",
-    "lunch_summary": "ランチサマリー",
-    "dinner_summary": "ディナーサマリー",
-    "food_total": "フード合計: ¥{amount}",
-    "drink_total": "ドリンク合計: ¥{amount}",
-    "phulkas_lunch_earnings": "プルカのランチ収益: ¥{amount}",
-    "phulkas_dinner_earnings": "プルカのディナー収益: ¥{amount}",
-    "day_total_earnings": "日合計収益: ¥{amount}",
-    "day_total_earnings_header": "日合計収益",
-    "add_bill_success": "請求エントリーが正常に追加されました！",
-    "add_bill_error": "請求エントリーの追加に失敗しました: {error}"
-  },
-  "summary": {
-    "title": "サマリーレポート",
-    "summary_for_range": "期間サマリー: {fromDate} から {toDate}",
-    "total_food": "フード合計 (期間): ¥{amount}",
-    "total_drinks": "ドリンク合計 (期間): ¥{amount}",
-    "phulkas_total_earnings": "プルカの合計収益 (期間): ¥{amount}",
-    "no_bills_found": "選択された期間の請求は見つかりませんでした。",
-    "entries_in_range": "期間内のエントリー ({count})",
-    "filter_title": "日付範囲でフィルタリング"
-  },
-  "bill_list": {
-    "date": "日付",
-    "column_time": "時間",
-    "food_amount": "フード (¥)",
-    "drink_amount": "ドリンク (¥)",
-    "total_amount": "合計 (¥)",
-    "actions": "アクション",
-    "edit": "編集",
-    "delete": "削除",
-    "time": {
-      "lunch": "ランチ",
-      "dinner": "ディナー"
-    },
-    "is_our_food": "私たちのフード",
-    "people_working": "勤務人数"
-  },
-   "edit": {
-    "title": "請求を編集",
-    "delete_bill": "請求を削除",
-    "bill_not_found": "請求が見つからないか、読み込めませんでした。",
-    "update_bill_error": "請求の更新に失敗しました: {error}",
-    "delete_bill_error": "請求の削除に失敗しました: {error}",
-    "delete_confirm_title": "削除の確認",
-    "delete_confirm_message": "この請求エントリー (ID: {id}) を削除してもよろしいですか？ この操作は元に戻せません。",
-    "delete": "削除",
-    "cancel": "キャンセル",
-    "deleting": "請求を削除中..."
-  },
-  "earnings_details": {
-    "lunch_food_base": "基本: ¥{base}",
-    "lunch_food_overage": "、超過: ¥{overage} / 2 = ¥{overageHalf}",
-    "lunch_drink_calc": "合計: ¥{total} * 0.25 = ¥{share}",
-    "dinner_drink_calc": "合計: ¥{total} * 0.25 = ¥{share}"
-  },
-  "errors": {
-    "failed_fetch": "データの取得に失敗しました。"
-  },
   "login": {
-    "title": "ログイン",
+    "title": "フルカスアプリにログイン",
     "username_label": "ユーザー名",
     "password_label": "パスワード",
-    "login_button": "ログイン",
-    "login_error": "ログインに失敗しました。ユーザー名とパスワードを確認してください。"
+    "login_button": "サインイン"
   },
-  "localeSwitcher": {
+  "auth": {
+    "login_failed": "ログインに失敗しました。認証情報を確認してください。",
+    "login_button": "ログイン"
+  },
+  "layout": {
+    "app_title": "フルカス売上アプリ",
+    "dashboard_link": "ダッシュボード",
+    "add_bill_link": "請求書を追加",
+    "summary_link": "サマリー",
+    "sign_out_button": "サインアウト"
+  },
+  "language_switcher": {
     "label": "言語",
-    "locale_en": "English",
-    "locale_ja": "日本語"
+    "en": "英語",
+    "ja": "日本語"
+  },
+  "summary": {
+    "title": "売上サマリー",
+    "filter_title": "期間で絞り込み",
+    "summary_for_range": "{fromDate}から{toDate}までのサマリー",
+    "total_food": "食事代合計売上: {amount}",
+    "total_drinks": "飲み物代合計売上: {amount}",
+    "phulkas_total_earnings": "フルカス合計売上: {amount}",
+    "entries_in_range": "期間内の請求書 ({count})",
+    "no_bills_found": "選択された期間の請求書は見つかりませんでした。"
   },
   "date_range_filter": {
     "from_date": "開始日",
     "to_date": "終了日",
-    "apply": "フィルター適用"
+    "apply_filter": "フィルターを適用",
+    "invalid_date_range": "無効な日付範囲です。有効な日付を選択してください。",
+    "from_date_after_to_date": "開始日は終了日より後にすることはできません。",
+    "dates_not_selected": "開始日と終了日を選択してください。",
+    "invalid_date_format": "無効な日付形式です。YYYY-MM-DD形式を使用してください。"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "todays_entries": "今日の入力",
+    "summary_for_date": "{date}のサマリー",
+    "lunch_summary": "ランチの概要",
+    "dinner_summary": "ディナーの概要",
+    "day_total_earnings_header": "日次合計売上",
+    "food_bills_total": "食事代合計: {amount}",
+    "drink_bills_total": "飲み物代合計: {amount}",
+    "phulkas_lunch_earnings": "ランチ売上: {amount}",
+    "phulkas_dinner_earnings": "ディナー売上: {amount}",
+    "add_bill_entry": "新しい請求書を入力",
+    "no_dinner_entries": "ディナーの入力はありません",
+    "no_lunch_entries": "ランチの入力はありません",
+    "no_entries_today": "今日の入力はありません。",
+    "no_summary_data": "この期間のサマリーデータはありません。"
+  },
+  "meal_type": {
+    "lunch": "ランチ",
+    "dinner": "ディナー"
+  },
+  "earnings_details": {
+    "lunch_food_base_income": "ランチ食事代基本収入: {base}",
+    "lunch_food_overage": " (+超過分: {overage} / 2 = {overageHalf})",
+    "total_lunch_food_income_share": "ランチ食事代からのフルカス合計売上: {amount}",
+    "drink_calc_lunch": "飲み物代の取り分 (ランチ): {total} * 0.5 = {share}",
+    "dinner_food_direct_share": "ディナー食事代直接収入: {share} (元値 {total}より)",
+    "dinner_common_pool_contrib_food": "食事代共通プール貢献: {amount}",
+    "dinner_common_pool_contrib_drinks": "飲み物代共通プール貢献: {amount}",
+    "total_common_pool": "共通プール合計: {amount}",
+    "our_common_pool_share": "共通プールからの我々の取り分: {amount} ({workers}人)",
+    "phulkas_food_earnings": "フルカス食事代売上: {amount}",
+    "dinner_food_calc_final": "ディナー食事代の取り分: {share} (元値 {total}より)"
+  },
+  "bill_list": {
+    "date": "日付",
+    "meal_type": "食事タイプ",
+    "food_amount": "食事代",
+    "drink_amount": "飲み物代",
+    "is_our_food": "持ち込み？",
+    "num_people_working": "スタッフ数",
+    "actions": "アクション",
+    "edit": "編集",
+    "delete": "削除",
+    "column_time": "時間",
+    "time_dinner": "ディナー時間",
+    "time_lunch": "ランチ時間",
+    "people_working": "勤務人数",
+    "total_amount": "合計金額"
+  },
+  "edit": {
+    "delete_confirm_title": "削除の確認",
+    "delete_confirm_message": "請求書ID {id}を削除してもよろしいですか？",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "deleting": "請求書を削除中...",
+    "delete_bill_error": "請求書の削除に失敗しました: {error}",
+    "bill_not_found": "請求書が見つかりませんでした。"
+  },
+  "errors": {
+    "failed_fetch": "データの取得に失敗しました。もう一度お試しください。"
+  },
+  "bill_form": {
+    "add_title": "新しい請求書を追加",
+    "edit_title": "請求書を編集",
+    "date_label": "日付",
+    "meal_type_label": "食事タイプ",
+    "lunch_option": "ランチ",
+    "dinner_option": "ディナー",
+    "food_amount_label": "食事代",
+    "drink_amount_label": "飲み物代",
+    "is_our_food_label": "持ち込みですか？",
+    "num_people_working_label": "ディナーの勤務人数",
+    "save_button": "請求書を保存",
+    "cancel_button": "キャンセル",
+    "add_success": "請求書が正常に追加されました！",
+    "edit_success": "請求書が正常に更新されました！",
+    "add_error": "請求書の追加に失敗しました: {error}",
+    "edit_error": "請求書の更新に失敗しました: {error}",
+    "food_amount_required": "食事代は必須です。",
+    "drink_amount_required": "飲み物代は必須です。",
+    "num_people_required": "ディナーの勤務人数は必須です。",
+    "num_people_min": "勤務人数は1人以上である必要があります。"
+  },
+  "general": {
+    "add": "追加"
   }
 }

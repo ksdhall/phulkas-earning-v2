@@ -1,256 +1,285 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Grid, Box, Typography, CircularProgress, MenuItem, FormControl, InputLabel, Select, SelectChangeEvent } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { format, isValid, parseISO } from 'date-fns';
+import {
+  TextField,
+  Button,
+  Box,
+  Typography,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  CircularProgress,
+  Alert,
+} from '@mui/material';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { Bill } from '@/types/Bill'; // Assuming this path is correct
+import { format } from 'date-fns';
 
 interface BillFormProps {
-  onSubmit: (formData: BillFormData) => void;
-  initialData?: BillFormData;
-  isSubmitting: boolean;
+  billId?: string; // Optional: for editing existing bills
 }
 
-export interface BillFormData {
-  date: string; // Use string for form handling, 'yyyy-MM-dd' format
-  mealType: 'lunch' | 'dinner';
-  foodAmount: number;
-  drinkAmount: number;
-  isOurFood?: boolean; // Optional for dinner
-  numberOfPeopleWorkingDinner?: number; // Optional for dinner
-}
-
-const BillForm: React.FC<BillFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
+const BillForm: React.FC<BillFormProps> = ({ billId }) => {
   const t = useTranslations('bill_form');
-  const tGeneral = useTranslations();
+  const tMealType = useTranslations('meal_type'); // For meal type options
+  const tErrors = useTranslations('errors');
+  const tGeneral = useTranslations('general'); // For 'Add' button
 
-  const [formData, setFormData] = useState<BillFormData>(
-    initialData || {
-      date: format(new Date(), 'yyyy-MM-dd'),
-      mealType: 'lunch',
-      foodAmount: 0,
-      drinkAmount: 0,
-      isOurFood: true,
-      numberOfPeopleWorkingDinner: 1,
-    }
-  );
+  const router = useRouter();
 
-  const [dateError, setDateError] = useState<string | null>(null);
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [mealType, setMealType] = useState<'lunch' | 'dinner'>('lunch');
+  const [foodAmount, setFoodAmount] = useState<number | ''>(0); // Initialize with 0 for better UX, or '' for truly empty
+  const [drinkAmount, setDrinkAmount] = useState<number | ''>(0); // Initialize with 0 or ''
+  const [isOurFood, setIsOurFood] = useState<boolean>(true);
+  const [numberOfPeopleWorkingDinner, setNumberOfPeopleWorkingDinner] = useState<number | ''>(1);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    if (initialData) {
-      let formattedDateString = initialData.date;
-
-      if (typeof initialData.date === 'object' && initialData.date !== null && isValid(initialData.date)) {
-           formattedDateString = format(initialData.date, 'yyyy-MM-dd');
-      } else if (typeof initialData.date === 'string') {
-           const parsedDate = parseISO(initialData.date);
-           if (!isValid(parsedDate)) {
-               console.warn("BillForm: initialData.date string is not a valid date:", initialData.date);
-               formattedDateString = format(new Date(), 'yyyy-MM-dd');
-           }
-      } else {
-           console.warn("BillForm: initialData.date is neither a Date object nor a string:", initialData.date);
-           formattedDateString = format(new Date(), 'yyyy-MM-dd');
-      }
-
-
-      setFormData({
-          ...initialData,
-          date: formattedDateString,
-          isOurFood: initialData.isOurFood ?? true,
-          numberOfPeopleWorkingDinner: initialData.numberOfPeopleWorkingDinner ?? 1,
-      });
-    }
-  }, [initialData, t]);
-
-
-  const handleDateChange = (date: Date | null) => {
-    if (date && isValid(date)) {
-      setFormData({ ...formData, date: format(date, 'yyyy-MM-dd') });
-      setDateError(null);
-    } else {
-      setFormData({ ...formData, date: '' });
-      setDateError(t('invalid_date'));
-    }
-  };
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-   const handleNumberInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-       const { name, value } = event.target;
-       const numberValue = parseFloat(value);
-       setFormData({ ...formData, [name]: isNaN(numberValue) ? 0 : numberValue });
-   };
-
-    const handleSelectChange = (event: SelectChangeEvent<string>) => {
-        const { name, value } = event.target;
-        if (name === 'mealType') {
-            setFormData({ ...formData, mealType: value as 'lunch' | 'dinner' });
-        } else if (name === 'isOurFood') {
-            setFormData({ ...formData, isOurFood: value === 'true' });
-        } else {
-            console.warn(`BillForm: Unexpected select change for name: ${name} with value: ${value}`);
+    if (billId) {
+      setLoading(true);
+      const fetchBill = async () => {
+        try {
+          const response = await fetch(`/api/bills/${billId}`);
+          if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+          }
+          const data: Bill = await response.json();
+          setDate(format(new Date(data.date), 'yyyy-MM-dd'));
+          setMealType(data.mealType);
+          setFoodAmount(data.foodAmount);
+          setDrinkAmount(data.drinkAmount);
+          setIsOurFood(data.isOurFood ?? true); // Default to true
+          setNumberOfPeopleWorkingDinner(data.numberOfPeopleWorkingDinner ?? 1); // Default to 1
+        } catch (err: any) {
+          setError(tErrors('failed_fetch') + `: ${err.message}`);
+        } finally {
+          setLoading(false);
         }
+      };
+      fetchBill();
+    }
+  }, [billId, tErrors]);
+
+  const handleFoodAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setFoodAmount(''); // Allow empty string
+    } else {
+      const numValue = Number(value);
+      if (!isNaN(numValue)) {
+        setFoodAmount(numValue);
+      }
+    }
+  };
+
+  const handleDrinkAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setDrinkAmount(''); // Allow empty string
+    } else {
+      const numValue = Number(value);
+      if (!isNaN(numValue)) {
+        setDrinkAmount(numValue);
+      }
+    }
+  };
+
+  const handleNumberOfPeopleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setNumberOfPeopleWorkingDinner(''); // Allow empty string
+    } else {
+      const numValue = Number(value);
+      if (!isNaN(numValue)) {
+        setNumberOfPeopleWorkingDinner(numValue);
+      }
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    // Basic validation
+    // FoodAmount and DrinkAmount are now non-mandatory, default to 0 if empty string
+    const finalFoodAmount = foodAmount === '' ? 0 : foodAmount;
+    const finalDrinkAmount = drinkAmount === '' ? 0 : drinkAmount;
+    const finalNumPeople = numberOfPeopleWorkingDinner === '' ? 1 : numberOfPeopleWorkingDinner; // Default to 1 if empty
+
+    if (mealType === 'dinner' && finalNumPeople < 1) {
+      setError(t('num_people_min'));
+      setLoading(false);
+      return;
+    }
+
+    const billData = {
+      date: new Date(date),
+      mealType,
+      foodAmount: finalFoodAmount,
+      drinkAmount: finalDrinkAmount,
+      isOurFood,
+      numberOfPeopleWorkingDinner: finalNumPeople,
     };
 
+    const method = billId ? 'PUT' : 'POST';
+    const url = billId ? `/api/bills/${billId}` : '/api/bills';
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!formData.date || dateError) {
-         setDateError(t('date_required'));
-         return;
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(billData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || response.statusText);
+      }
+
+      if (billId) {
+        setSuccess(t('edit_success'));
+      } else {
+        setSuccess(t('add_success'));
+        // Clear form for new entry
+        setDate(format(new Date(), 'yyyy-MM-dd'));
+        setMealType('lunch');
+        setFoodAmount(0);
+        setDrinkAmount(0);
+        setIsOurFood(true);
+        setNumberOfPeopleWorkingDinner(1);
+      }
+      router.push('/en/dashboard'); // Redirect to dashboard after success
+    } catch (err: any) {
+      setError((billId ? t('edit_error') : t('add_error')) + `: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-     if (formData.foodAmount < 0 || formData.drinkAmount < 0) {
-          setError(t('amounts_must_be_positive'));
-          return;
-     }
-
-     if (formData.mealType === 'dinner') {
-         if (formData.isOurFood === undefined) {
-              setError(t('is_our_food_required'));
-              return;
-         }
-         if (formData.numberOfPeopleWorkingDinner === undefined || formData.numberOfPeopleWorkingDinner <= 0) {
-              setError(t('number_of_people_required'));
-              return;
-         }
-     } else {
-          setFormData(prev => ({
-              ...prev,
-              isOurFood: true,
-              numberOfPeopleWorkingDinner: 1,
-          }));
-     }
-
-
-    onSubmit(formData);
   };
 
-   const setError = (message: string | null) => {
-       console.error("Form Error:", message);
-   };
-
+  if (loading && billId) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-        <Grid container spacing={2}>
-          {/* Using breakpoint props directly - this is the correct v7 syntax */}
-          {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12} md={6}>
-            <DatePicker
-              label={t('date_label')}
-              value={formData.date ? parseISO(formData.date) : null}
-              onChange={handleDateChange}
-              slotProps={{ textField: { fullWidth: true, error: !!dateError, helperText: dateError } }}
-            />
-          </Grid>
-          {/* Using breakpoint props directly - this is the correct v7 syntax */}
-          {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12} md={6}>
-             <FormControl fullWidth>
-                 <InputLabel id="meal-type-label">{t('meal_type_label')}</InputLabel>
-                 <Select
-                     labelId="meal-type-label"
-                     id="meal-type"
-                     name="mealType"
-                     value={formData.mealType}
-                     label={t('meal_type_label')}
-                     onChange={handleSelectChange}
-                 >
-                     <MenuItem value="lunch">{tGeneral('meal_types.lunch')}</MenuItem>
-                     <MenuItem value="dinner">{tGeneral('meal_types.dinner')}</MenuItem>
-                 </Select>
-             </FormControl>
-          </Grid>
-          {/* Using breakpoint props directly - this is the correct v7 syntax */}
-          {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12} md={6}>
-            <TextField
-              fullWidth
-              id="foodAmount"
-              name="foodAmount"
-              label={t('food_amount_label')}
-              type="number"
-              value={formData.foodAmount}
-              onChange={handleNumberInputChange}
-              required
-              inputProps={{ step: "0.01" }}
-            />
-          </Grid>
-          {/* Using breakpoint props directly - this is the correct v7 syntax */}
-          {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12} md={6}>
-            <TextField
-              fullWidth
-              id="drinkAmount"
-              name="drinkAmount"
-              label={t('drink_amount_label')}
-              type="number"
-              value={formData.drinkAmount}
-              onChange={handleNumberInputChange}
-              required
-              inputProps={{ step: "0.01" }}
-            />
-          </Grid>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        marginTop: 4,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        maxWidth: 500,
+        margin: '0 auto',
+        padding: 3,
+        border: '1px solid #ccc',
+        borderRadius: 2,
+        boxShadow: 3,
+      }}
+    >
+      <Typography variant="h5" component="h1" gutterBottom>
+        {billId ? t('edit_title') : t('add_title')}
+      </Typography>
 
-           {/* Dinner specific fields */}
-           {formData.mealType === 'dinner' && (
-               <>
-                  {/* Using breakpoint props directly - this is the correct v7 syntax */}
-                  {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-                  <Grid xs={12} md={6}>
-                     <FormControl fullWidth>
-                         <InputLabel id="is-our-food-label">{t('is_our_food_label')}</InputLabel>
-                          <Select
-                              labelId="is-our-food-label"
-                              id="isOurFood"
-                              name="isOurFood"
-                              value={formData.isOurFood ? 'true' : 'false'}
-                              label={t('is_our_food_label')}
-                              onChange={handleSelectChange}
-                          >
-                              <MenuItem value="true">{tGeneral('yes')}</MenuItem>
-                              <MenuItem value="false">{tGeneral('no')}</MenuItem>
-                          </Select>
-                     </FormControl>
-                  </Grid>
-                   {/* Using breakpoint props directly - this is the correct v7 syntax */}
-                   {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-                  <Grid xs={12} md={6}>
-                       <TextField
-                           fullWidth
-                           id="numberOfPeopleWorkingDinner"
-                           name="numberOfPeopleWorkingDinner"
-                           label={t('number_of_people_label')}
-                           type="number"
-                           value={formData.numberOfPeopleWorkingDinner}
-                           onChange={handleNumberInputChange}
-                           required
-                           inputProps={{ step: "1" }}
-                       />
-                   </Grid>
-               </>
-           )}
+      {error && <Alert severity="error">{error}</Alert>}
+      {success && <Alert severity="success">{success}</Alert>}
 
+      <TextField
+        label={t('date_label')}
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        fullWidth
+        required
+        InputLabelProps={{
+          shrink: true,
+        }}
+      />
 
-          {/* Using breakpoint props directly - this is the correct v7 syntax */}
-          {/* @ts-expect-error: Bypassing type check due to persistent environment issue */}
-          <Grid xs={12}>
-            <Button type="submit" variant="contained" color="primary" fullWidth disabled={isSubmitting}>
-              {isSubmitting ? <CircularProgress size={24} /> : (initialData ? tGeneral('edit.save') : tGeneral('add'))}
-            </Button>
-          </Grid>
-        </Grid>
-      </Box>
-    </LocalizationProvider>
+      <TextField
+        select
+        label={t('meal_type_label')}
+        value={mealType}
+        onChange={(e) => setMealType(e.target.value as 'lunch' | 'dinner')}
+        fullWidth
+        required
+      >
+        <MenuItem value="lunch">{tMealType('lunch')}</MenuItem>
+        <MenuItem value="dinner">{tMealType('dinner')}</MenuItem>
+      </TextField>
+
+      <TextField
+        label={t('food_amount_label')}
+        type="number"
+        value={foodAmount} // Use number or ''
+        onChange={handleFoodAmountChange}
+        fullWidth
+        inputProps={{ min: 0 }}
+        // Removed `required`
+      />
+
+      <TextField
+        label={t('drink_amount_label')}
+        type="number"
+        value={drinkAmount} // Use number or ''
+        onChange={handleDrinkAmountChange}
+        fullWidth
+        inputProps={{ min: 0 }}
+        // Removed `required`
+      />
+
+      {mealType === 'dinner' && (
+        <>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={isOurFood}
+                onChange={(e) => setIsOurFood(e.target.checked)}
+                name="isOurFood"
+                color="primary"
+              />
+            }
+            label={t('is_our_food_label')}
+          />
+          <TextField
+            label={t('num_people_working_label')}
+            type="number"
+            value={numberOfPeopleWorkingDinner} // Use number or ''
+            onChange={handleNumberOfPeopleChange}
+            fullWidth
+            inputProps={{ min: 1 }}
+            // No longer required, but validated to be >= 1 if it's dinner
+            error={mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)}
+            helperText={
+              mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)
+                ? t('num_people_min')
+                : ''
+            }
+          />
+        </>
+      )}
+
+      <Button type="submit" variant="contained" color="primary" disabled={loading} sx={{ mt: 2 }}>
+        {loading ? <CircularProgress size={24} color="inherit" /> : (billId ? t('save_button') : tGeneral('add'))}
+      </Button>
+      <Button type="button" variant="outlined" onClick={() => router.push('/en/dashboard')} disabled={loading}>
+        {t('cancel_button')}
+      </Button>
+    </Box>
   );
 };
 

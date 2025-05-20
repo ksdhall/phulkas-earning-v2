@@ -1,91 +1,130 @@
 {
-  "nav": {
-    "app_name": "Phulka's App",
-    "dashboard": "Dashboard",
-    "summary": "Summary",
-    "logged_in_as": "Logged in as {name}",
-    "logout": "Logout",
-    "login": "Login"
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "todays_entries": "Entries for {date}",
-    "add_bill_entry": "Add Bill Entry",
-    "no_entries_today": "No entries for this date.",
-    "summary_for_day": "Summary for {date}",
-    "lunch_summary": "Lunch Summary",
-    "dinner_summary": "Dinner Summary",
-    "food_total": "Food Total: ¥{amount}",
-    "drink_total": "Drink Total: ¥{amount}",
-    "phulkas_lunch_earnings": "Phulka's Lunch Earnings: ¥{amount}",
-    "phulkas_dinner_earnings": "Phulka's Dinner Earnings: ¥{amount}",
-    "day_total_earnings": "Day Total Earnings: ¥{amount}",
-    "day_total_earnings_header": "Day Total Earnings",
-    "add_bill_success": "Bill entry added successfully!",
-    "add_bill_error": "Failed to add bill entry: {error}"
-  },
-  "summary": {
-    "title": "Summary Report",
-    "summary_for_range": "Summary for Range: {fromDate} to {toDate}",
-    "total_food": "Total Food (Range): ¥{amount}",
-    "total_drinks": "Total Drinks (Range): ¥{amount}",
-    "phulkas_total_earnings": "Phulka's Total Earnings (Range): ¥{amount}",
-    "no_bills_found": "No bills found for the selected date range.",
-    "entries_in_range": "Entries in Range ({count})",
-    "filter_title": "Filter by Date Range"
-  },
-  "bill_list": {
-    "date": "Date",
-    "column_time": "Time",
-    "food_amount": "Food (¥)",
-    "drink_amount": "Drinks (¥)",
-    "total_amount": "Total (¥)",
-    "actions": "Actions",
-    "edit": "Edit",
-    "delete": "Delete",
-    "time": {
-      "lunch": "Lunch",
-      "dinner": "Dinner"
-    },
-    "is_our_food": "Our Food",
-    "people_working": "People Working"
-  },
-   "edit": {
-    "title": "Edit Bill",
-    "delete_bill": "Delete Bill",
-    "bill_not_found": "Bill not found or could not be loaded.",
-    "update_bill_error": "Failed to update bill: {error}",
-    "delete_bill_error": "Failed to delete bill: {error}",
-    "delete_confirm_title": "Confirm Deletion",
-    "delete_confirm_message": "Are you sure you want to delete this bill entry (ID: {id})? This action cannot be undone.",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "deleting": "Deleting bill..."
-  },
-  "earnings_details": {
-    "lunch_food_base": "Base: ¥{base}",
-    "lunch_food_overage": ", Overage: ¥{overage} / 2 = ¥{overageHalf}",
-    "lunch_drink_calc": "Total: ¥{total} * 0.25 = ¥{share}",
-    "dinner_drink_calc": "Total: ¥{total} * 0.25 = ¥{share}"
-  },
-  "errors": {
-    "failed_fetch": "Failed to fetch data."
-  },
   "login": {
-    "title": "Login",
+    "title": "Login to Phulkas App",
     "username_label": "Username",
     "password_label": "Password",
-    "login_button": "Login",
-    "login_error": "Login failed. Please check your username and password."
+    "login_button": "Sign In"
   },
-  "localeSwitcher": {
+  "auth": {
+    "login_failed": "Login failed. Please check your credentials.",
+    "login_button": "Login"
+  },
+  "layout": {
+    "app_title": "Phulkas Earning App",
+    "dashboard_link": "Dashboard",
+    "add_bill_link": "Add Bill",
+    "summary_link": "Summary",
+    "sign_out_button": "Sign Out"
+  },
+  "language_switcher": {
     "label": "Language",
-    "locale_en": "English",
-    "locale_ja": "日本語"
+    "en": "English",
+    "ja": "Japanese"
+  },
+  "summary": {
+    "title": "Earnings Summary",
+    "filter_title": "Filter by Date Range",
+    "summary_for_range": "Summary for {fromDate} to {toDate}",
+    "total_food": "Total Food Earnings: {amount}",
+    "total_drinks": "Total Drink Earnings: {amount}",
+    "phulkas_total_earnings": "Phulkas Total Earnings: {amount}",
+    "entries_in_range": "Bills in Range ({count})",
+    "no_bills_found": "No bills found for the selected date range."
   },
   "date_range_filter": {
     "from_date": "From Date",
     "to_date": "To Date",
-    "apply": "Apply Filter"
+    "apply_filter": "Apply Filter",
+    "invalid_date_range": "Invalid date range. Please select valid dates.",
+    "from_date_after_to_date": "From date cannot be after To date.",
+    "dates_not_selected": "Please select both From and To dates.",
+    "invalid_date_format": "Invalid date format. Please use YYYY-MM-DD."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "todays_entries": "Today's Entries",
+    "summary_for_date": "Summary for {date}",
+    "lunch_summary": "Lunch Summary",
+    "dinner_summary": "Dinner Summary",
+    "day_total_earnings_header": "Day Total Earnings",
+    "food_bills_total": "Food Bills Total: {amount}",
+    "drink_bills_total": "Drink Bills Total: {amount}",
+    "phulkas_lunch_earnings": "Phulkas Lunch Earnings: {amount}",
+    "phulkas_dinner_earnings": "Phulkas Dinner Earnings: {amount}",
+    "add_bill_entry": "Add New Bill Entry",
+    "no_dinner_entries": "No Dinner Entries",
+    "no_lunch_entries": "No Lunch Entries",
+    "no_entries_today": "No entries for today.",
+    "no_summary_data": "No summary data available for this period."
+  },
+  "meal_type": {
+    "lunch": "Lunch",
+    "dinner": "Dinner"
+  },
+  "earnings_details": {
+    "lunch_food_base_income": "Lunch Food Base Income: {base}",
+    "lunch_food_overage": " (+Overage: {overage} / 2 = {overageHalf})",
+    "total_lunch_food_income_share": "Total Lunch Food Income Share: {amount}",
+    "drink_calc_lunch": "Drinks Share (Lunch): {total} * 0.5 = {share}",
+    "dinner_food_direct_share": "Dinner Food Direct Share: {share} (from Raw {total})",
+    "dinner_common_pool_contrib_food": "Food Contrib to Common Pool: {amount}",
+    "dinner_common_pool_contrib_drinks": "Drink Contrib to Common Pool: {amount}",
+    "total_common_pool": "Total Common Pool: {amount}",
+    "our_common_pool_share": "Our Common Pool Share: {amount} ({workers} worker(s))",
+    "phulkas_food_earnings": "Phulkas Food Share: {amount}",
+    "dinner_food_calc_final": "Dinner Food Share: {share} (from Raw {total})"
+  },
+  "bill_list": {
+    "date": "Date",
+    "meal_type": "Meal Type",
+    "food_amount": "Food",
+    "drink_amount": "Drinks",
+    "is_our_food": "Our Food?",
+    "num_people_working": "Workers",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "column_time": "Time",
+    "time_dinner": "Dinner Time",
+    "time_lunch": "Lunch Time",
+    "people_working": "People Working",
+    "total_amount": "Total Amount"
+  },
+  "edit": {
+    "delete_confirm_title": "Confirm Deletion",
+    "delete_confirm_message": "Are you sure you want to delete bill ID {id}?",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleting": "Deleting bill...",
+    "delete_bill_error": "Failed to delete bill: {error}",
+    "bill_not_found": "Bill not found."
+  },
+  "errors": {
+    "failed_fetch": "Failed to fetch data. Please try again."
+  },
+  "bill_form": {
+    "add_title": "Add New Bill",
+    "edit_title": "Edit Bill",
+    "date_label": "Date",
+    "meal_type_label": "Meal Type",
+    "lunch_option": "Lunch",
+    "dinner_option": "Dinner",
+    "food_amount_label": "Food Amount",
+    "drink_amount_label": "Drink Amount",
+    "is_our_food_label": "Is Our Food?",
+    "num_people_working_label": "Number of People Working Dinner",
+    "save_button": "Save Bill",
+    "cancel_button": "Cancel",
+    "add_success": "Bill added successfully!",
+    "edit_success": "Bill updated successfully!",
+    "add_error": "Failed to add bill: {error}",
+    "edit_error": "Failed to update bill: {error}",
+    "food_amount_required": "Food amount is required.",
+    "drink_amount_required": "Drink amount is required.",
+    "num_people_required": "Number of people working is required for dinner.",
+    "num_people_min": "Number of people working must be at least 1."
+  },
+  "general": {
+    "add": "Add"
   }
 }
