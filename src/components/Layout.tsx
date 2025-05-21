@@ -67,9 +67,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </>
         )}
       </List>
-
+      
       {isAuthenticated && <Divider sx={{ my: 1 }} />}
-
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
         <LanguageSwitcher />
         <ThemeToggleButton />
@@ -93,18 +92,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </IconButton>
           )}
 
-          {/* Placeholder Logo and App Title */}
+          {/* Logo and App Title */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <Link href="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
               <img
-                src="https://placehold.co/40x40/000000/FFFFFF?text=LOGO"
-                alt="Restaurant Logo Placeholder"
-                style={{ height: 40, width: 40, borderRadius: '50%', marginRight: 8 }}
+                src="/phulka.png"
+                alt="Phulkas App Logo"
+                style={{ height: 50, width: 50, borderRadius: '50%', marginRight: 8 }} // Increased size to 50x50
                 onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                  e.currentTarget.src = "https://placehold.co/40x40/CCCCCC/000000?text=LOGO";
+                  e.currentTarget.src = "https://placehold.co/50x50/CCCCCC/000000?text=LOGO"; // Fallback with new size
                 }}
               />
-              <Typography variant="h6" component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <Typography variant="h6" component="div" sx={{ display: 'block' }}> {/* Always display the title */}
                 {t('app_title')}
               </Typography>
             </Link>

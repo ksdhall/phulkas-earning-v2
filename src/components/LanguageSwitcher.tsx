@@ -1,54 +1,35 @@
 "use client";
 
+import { useLocale } from 'next-intl';
+import { usePathname, useRouter } from 'next/navigation';
+import { MenuItem, Select, FormControl } from '@mui/material';
 import React from 'react';
-import { Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material';
 import { useTranslations } from 'next-intl';
-import { useParams, useRouter, usePathname } from 'next/navigation';
-import { routing } from '@/i18n/routing';
 
 const LanguageSwitcher: React.FC = () => {
-  const t = useTranslations('language_switcher');
   const router = useRouter();
   const pathname = usePathname();
-  const params = useParams();
+  const currentLocale = useLocale(); // Gets the locale from next-intl context
 
-  const currentLocale = params.locale as string;
-  const locales = routing.locales;
+  const t = useTranslations('language_switcher');
 
-  const handleLocaleChange = (event: SelectChangeEvent<string>) => {
+  const handleChange = (event: any) => {
     const newLocale = event.target.value;
-    const newPath = `/${newLocale}${pathname.startsWith(`/${currentLocale}`) ? pathname.substring(currentLocale.length + 1) : pathname}`;
-    router.push(newPath);
+    // Replace the locale segment in the pathname
+    const newPathname = `/${newLocale}${pathname.substring(3)}`; // Assumes /xx/ path structure
+    router.push(newPathname);
   };
 
   return (
-    <FormControl size="small" sx={{ minWidth: 120, '& .MuiInputLabel-root': { color: 'inherit' }, '& .MuiSelect-icon': { color: 'inherit' } }}>
-      <InputLabel id="language-switcher-label" color="primary" sx={{ color: 'inherit' }}>{t('label')}</InputLabel>
+    <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
       <Select
-        labelId="language-switcher-label"
-        id="language-switcher"
         value={currentLocale}
-        label={t('label')}
-        onChange={handleLocaleChange}
-        color="primary" // Ensures the select component's primary color is used
-        sx={{
-          color: 'inherit', // Inherit text color from parent (AppBar's Toolbar)
-          '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'inherit', // Inherit border color
-          },
-          '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'inherit', // Inherit border color on hover
-          },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'inherit', // Inherit border color when focused
-          },
-        }}
+        onChange={handleChange}
+        displayEmpty
+        inputProps={{ 'aria-label': t('label') }}
       >
-        {locales.map((loc) => (
-          <MenuItem key={loc} value={loc}>
-            {t(loc)}
-          </MenuItem>
-        ))}
+        <MenuItem value="en">{t('en')}</MenuItem>
+        <MenuItem value="ja">{t('ja')}</MenuItem>
       </Select>
     </FormControl>
   );

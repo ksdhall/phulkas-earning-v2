@@ -84,7 +84,7 @@ const ThemeProviderWrapper: React.FC<ThemeProviderWrapperProps> = ({ children })
           MuiPaper: {
             styleOverrides: {
               root: {
-                borderRadius: 12, // This will apply to cards, dialogs, etc.
+                borderRadius: 12,
               },
             },
           },
@@ -104,7 +104,6 @@ const ThemeProviderWrapper: React.FC<ThemeProviderWrapperProps> = ({ children })
               },
             },
           },
-          // REMOVED: MuiAppBar styleOverrides if they were present
         },
       }),
     [mode],

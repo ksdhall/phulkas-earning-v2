@@ -75,20 +75,19 @@ const calculateDinnerMealSummary = (foodAmount: number, drinkAmount: number, isO
 
 export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
   const dailySummary: DailySummary = getDefaultDailySummary();
+
+  let totalLunchFoodAmount = 0;
+  let totalLunchDrinkAmount = 0;
+
   let tempDinnerFoodTotal = 0;
   let tempDinnerDrinkTotal = 0;
   let tempDinnerIsOurFood: boolean = true;
   let tempDinnerNumWorkers: number = 1;
 
   bills.forEach(bill => {
-    // FIX: Compare with lowercase mealType string
     if (bill.mealType === 'lunch') {
-      const mealSummary = calculateLunchMealSummary(bill.foodAmount, bill.drinkAmount);
-      dailySummary.lunch.rawFoodTotal += mealSummary.rawFoodTotal;
-      dailySummary.lunch.rawDrinkTotal += mealSummary.rawDrinkTotal;
-      dailySummary.lunch.foodEarnings += mealSummary.foodEarnings;
-      dailySummary.lunch.drinkEarnings += mealSummary.drinkEarnings;
-      dailySummary.lunch.phulkasEarnings += mealSummary.phulkasEarnings;
+      totalLunchFoodAmount += bill.foodAmount;
+      totalLunchDrinkAmount += bill.drinkAmount;
     } else if (bill.mealType === 'dinner') {
       tempDinnerFoodTotal += bill.foodAmount;
       tempDinnerDrinkTotal += bill.drinkAmount;
@@ -97,6 +96,13 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
     }
   });
 
+  // Calculate Lunch Summary once with aggregated totals
+  if (totalLunchFoodAmount > 0 || totalLunchDrinkAmount > 0) {
+    const aggregatedLunchSummary = calculateLunchMealSummary(totalLunchFoodAmount, totalLunchDrinkAmount);
+    dailySummary.lunch = aggregatedLunchSummary; // Assign the calculated summary directly
+  }
+
+  // Calculate Dinner Summary once with aggregated totals
   if (tempDinnerFoodTotal > 0 || tempDinnerDrinkTotal > 0) {
     const aggregatedDinnerSummary = calculateDinnerMealSummary(
       tempDinnerFoodTotal,
@@ -104,13 +110,7 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
       tempDinnerIsOurFood,
       tempDinnerNumWorkers
     );
-    dailySummary.dinner.rawFoodTotal = aggregatedDinnerSummary.rawFoodTotal;
-    dailySummary.dinner.rawDrinkTotal = aggregatedDinnerSummary.rawDrinkTotal;
-    dailySummary.dinner.foodEarnings = aggregatedDinnerSummary.foodEarnings;
-    dailySummary.dinner.drinkEarnings = aggregatedDinnerSummary.drinkEarnings;
-    dailySummary.dinner.phulkasEarnings = aggregatedDinnerSummary.phulkasEarnings;
-    dailySummary.dinner.isOurFood = aggregatedDinnerSummary.isOurFood;
-    dailySummary.dinner.numberOfPeopleWorkingDinner = aggregatedDinnerSummary.numberOfPeopleWorkingDinner;
+    dailySummary.dinner = aggregatedDinnerSummary; // Assign the calculated summary directly
   }
 
   dailySummary.dayTotalEarnings = dailySummary.lunch.phulkasEarnings + dailySummary.dinner.phulkasEarnings;

@@ -2,7 +2,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { redirect } from "next/navigation";
-import DashboardPageClient from '@/components/DashboardPageClient';
+import DashboardPageClient from "@/components/DashboardPageClient";
 
 interface DashboardPageProps {
   params: {
@@ -10,13 +10,15 @@ interface DashboardPageProps {
   };
 }
 
-export default async function DashboardPage({ params }: DashboardPageProps) { // Corrected: params is directly available
+export default async function DashboardPage(props: DashboardPageProps) {
   const session = await getServerSession(authOptions);
 
+  const currentParams = props.params; // Get params explicitly
+  const currentLocale = currentParams.locale; // Access locale from the explicit params object
+
   if (!session) {
-    redirect(`/${params.locale}`); // Use params.locale directly
+    redirect(`/${currentLocale}`);
   }
 
-  // Render the client component, passing the locale
-  return <DashboardPageClient locale={params.locale} />;
+  return <DashboardPageClient locale={currentLocale} />;
 }

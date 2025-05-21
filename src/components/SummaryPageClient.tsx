@@ -47,7 +47,6 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   const [fromDate, setFromDate] = useState<string>(initialFromDate || '');
   const [toDate, setToDate] = useState<string>(initialToDate || '');
 
-  // Helper for formatting currency (moved here for local use)
   const formatCurrency = useCallback((amount: number | string) => {
     let numericAmount: number;
     if (typeof amount === 'string') {
@@ -169,7 +168,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
       <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
         <Typography variant="h6" gutterBottom>{t('filter_title')}</Typography>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={5}>
+          <Grid xs={12} sm={5}>
             <TextField
               label={tDateFilter('from_date')}
               type="date"
@@ -179,7 +178,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={5}>
+          <Grid xs={12} sm={5}>
             <TextField
               label={tDateFilter('to_date')}
               type="date"
@@ -189,7 +188,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={2}>
+          <Grid xs={12} sm={2}>
             <Button variant="contained" onClick={handleApplyFilter} fullWidth>
               {tDateFilter('apply_filter')}
             </Button>
@@ -207,19 +206,19 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
           </Typography>
           <Box sx={{ mb: 2 }}>
             <Typography variant="body1">
-              {t('total_food', { amount: formatCurrency(rangeSummary.lunch.rawFoodTotal) })} {/* FIX */}
+              {t('total_food', { amount: formatCurrency(rangeSummary.lunch.rawFoodTotal) })}
             </Typography>
             <Typography variant="body1">
-              {t('total_drinks', { amount: formatCurrency(rangeSummary.lunch.rawDrinkTotal) })} {/* FIX */}
+              {t('total_drinks', { amount: formatCurrency(rangeSummary.lunch.rawDrinkTotal) })}
             </Typography>
             <Typography variant="h6" sx={{ mt: 2 }}>
-              {t('phulkas_total_earnings', { amount: formatCurrency(rangeSummary.dayTotalEarnings) })} {/* FIX */}
+              {t('phulkas_total_earnings', { amount: formatCurrency(rangeSummary.dayTotalEarnings) })}
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
-              {t('total_lunch_earnings_range', { amount: formatCurrency(rangeSummary.lunch.phulkasEarnings) })} {/* FIX */}
+              {t('total_lunch_earnings_range', { amount: formatCurrency(rangeSummary.lunch.phulkasEarnings) })}
             </Typography>
             <Typography variant="body1">
-              {t('total_dinner_earnings_range', { amount: formatCurrency(rangeSummary.dinner.phulkasEarnings) })} {/* FIX */}
+              {t('total_dinner_earnings_range', { amount: formatCurrency(rangeSummary.dinner.phulkasEarnings) })}
             </Typography>
           </Box>
         </Paper>

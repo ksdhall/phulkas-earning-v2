@@ -10,7 +10,7 @@
     "login_button": "Login"
   },
   "layout": {
-    "app_title": "Phulkas Earning App",
+    "app_title": "Earning App",
     "dashboard_link": "Dashboard",
     "add_bill_link": "Add Bill",
     "summary_link": "Summary",
@@ -41,7 +41,7 @@
     "invalid_date_range": "Invalid date range. Please select valid dates.",
     "from_date_after_to_date": "From date cannot be after To date.",
     "dates_not_selected": "Please select both From and To dates.",
-    "invalid_date_format": "Invalid date format. Please use YYYY-MM-DD."
+    "invalid_date_format": "Invalid date format. Please use Букмекерлар-MM-DD."
   },
   "dashboard": {
     "title": "Dashboard",

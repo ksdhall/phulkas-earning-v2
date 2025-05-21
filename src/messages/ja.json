@@ -1,5 +1,5 @@
 {
-  "login": {
+    "login": {
     "title": "フルカスアプリにログイン",
     "username_label": "ユーザー名",
     "password_label": "パスワード",
@@ -10,7 +10,7 @@
     "login_button": "ログイン"
   },
   "layout": {
-    "app_title": "フルカス売上アプリ",
+    "app_title": "売上アプリ",
     "dashboard_link": "ダッシュボード",
     "add_bill_link": "請求書を追加",
     "summary_link": "サマリー",

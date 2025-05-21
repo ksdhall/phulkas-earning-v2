@@ -18,6 +18,14 @@ import {
   ListItem,
   ListItemText,
   Grid,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Button,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, CheckCircle, Close } from '@mui/icons-material';
 import { useTranslations } from 'next-intl';
@@ -32,9 +40,9 @@ interface BillListProps {
 }
 
 const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateColumn = true }) => {
-  const t = useTranslations('bill_list'); // This translator is for 'bill_list' namespace
+  const t = useTranslations('bill_list');
   const tMealType = useTranslations('meal_type');
-  const tEdit = useTranslations('edit'); // This translator is for 'edit' namespace
+  const tEdit = useTranslations('edit');
   const tErrors = useTranslations('errors');
   const tGeneral = useTranslations('general');
 
@@ -61,7 +69,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
   };
 
   const handleDeleteClick = (billId: number) => {
-    onDelete(billId); // Call the parent's onDelete prop directly
+    onDelete(billId);
   };
 
   if (!bills || bills.length === 0) {
@@ -127,10 +135,10 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
               )}
               
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 2, borderTop: '1px solid', borderColor: 'divider', mt: 1 }}>
-                <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}> {/* FIX: Changed tEdit('edit') to t('edit') */}
+                <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}>
                   <EditIcon />
                 </IconButton>
-                <IconButton onClick={() => handleDeleteClick(bill.id)} color="error" aria-label={t('delete')}> {/* FIX: Changed tEdit('delete') to t('delete') */}
+                <IconButton onClick={() => handleDeleteClick(bill.id)} color="error" aria-label={t('delete')}>
                   <DeleteIcon />
                 </IconButton>
               </Box>
@@ -173,10 +181,10 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                     {bill.mealType === 'dinner' ? (bill.numberOfPeopleWorkingDinner || '-') : '-'}
                   </TableCell>
                   <TableCell align="center">
-                    <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}> {/* FIX: Changed tEdit('edit') to t('edit') */}
+                    <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}>
                       <EditIcon />
                     </IconButton>
-                    <IconButton onClick={() => handleDeleteClick(bill.id)} color="error" aria-label={t('delete')}> {/* FIX: Changed tEdit('delete') to t('delete') */}
+                    <IconButton onClick={() => handleDeleteClick(bill.id)} color="error" aria-label={t('delete')}>
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>
@@ -186,7 +194,6 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
           </Table>
         </TableContainer>
       )}
-      {/* The delete confirmation dialog is now handled by the parent component (DashboardPageClient) */}
     </Box>
   );
 };

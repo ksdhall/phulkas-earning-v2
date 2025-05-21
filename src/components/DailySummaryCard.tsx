@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Box, Typography, Paper, Grid, useTheme, useMediaQuery } from '@mui/material'; // Import useTheme, useMediaQuery
+import { Box, Typography, Paper, Grid, useTheme, useMediaQuery } from '@mui/material';
 import { useTranslations } from 'next-intl';
 import { DailySummary, MealSummary } from '@/lib/calculations';
 import { AppConfig } from '@/config/app';
@@ -16,7 +16,7 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
   const tEarnings = useTranslations('earnings_details');
 
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Detect mobile screens
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (!summary) {
     return (
@@ -145,8 +145,8 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
       sx={{
         p: 3,
         mb: 3,
-        borderRadius: isMobile ? 2 : 3, // Smaller border radius on mobile
-        mx: isMobile ? 1 : 'auto', // Add some horizontal margin on mobile
+        borderRadius: isMobile ? 2 : 3,
+        mx: isMobile ? 1 : 'auto',
       }}
     >
       {date && (
@@ -155,16 +155,16 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
         </Typography>
       )}
 
-      <Grid container spacing={isMobile ? 1 : 3}> {/* Reduce spacing on mobile */}
-        <Grid item xs={12} sm={6}>
+      <Grid container spacing={isMobile ? 1 : 3}>
+        <Grid xs={12} sm={6}>
           {renderMealDetails('lunch', lunch)}
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid xs={12} sm={6}>
           {renderMealDetails('dinner', dinner)}
         </Grid>
 
-        <Grid item xs={12} sx={{ mt: 2 }}>
+        <Grid xs={12} sx={{ mt: 2 }}>
           <Typography variant="h6" color="secondary" sx={{ fontWeight: 'bold', borderTop: '1px solid #eee', pt: 1 }}>
             {t('day_total_earnings_header')}: {formatCurrency(dayTotalEarnings)}
           </Typography>
