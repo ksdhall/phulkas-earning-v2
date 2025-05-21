@@ -81,6 +81,7 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
   let tempDinnerNumWorkers: number = 1;
 
   bills.forEach(bill => {
+    // FIX: Compare with lowercase mealType string
     if (bill.mealType === 'lunch') {
       const mealSummary = calculateLunchMealSummary(bill.foodAmount, bill.drinkAmount);
       dailySummary.lunch.rawFoodTotal += mealSummary.rawFoodTotal;
@@ -117,93 +118,61 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
 };
 
 export const calculateRangeSummary = (bills: Bill[]): DailySummary => {
-  let rangeFoodTotal = 0;
-  let rangeDrinkTotal = 0;
-  let rangePhulkasEarnings = 0;
+  let totalRawFood = 0;
+  let totalRawDrink = 0;
+  let totalLunchPhulkasEarnings = 0;
+  let totalDinnerPhulkasEarnings = 0;
+  let totalOverallPhulkasEarnings = 0;
 
   const dailySummaries = calculateDailySummariesForRange(bills);
 
   dailySummaries.forEach(dailyEntry => {
-    rangeFoodTotal += dailyEntry.summary.lunch.rawFoodTotal + dailyEntry.summary.dinner.rawFoodTotal;
-    rangeDrinkTotal += dailyEntry.summary.lunch.rawDrinkTotal + dailyEntry.summary.dinner.rawDrinkTotal;
-    rangePhulkasEarnings += dailyEntry.summary.dayTotalEarnings;
+    totalRawFood += dailyEntry.summary.lunch.rawFoodTotal + dailyEntry.summary.dinner.rawFoodTotal;
+    totalRawDrink += dailyEntry.summary.lunch.rawDrinkTotal + dailyEntry.summary.dinner.rawDrinkTotal;
+    
+    totalLunchPhulkasEarnings += dailyEntry.summary.lunch.phulkasEarnings;
+    totalDinnerPhulkasEarnings += dailyEntry.summary.dinner.phulkasEarnings;
+    
+    totalOverallPhulkasEarnings += dailyEntry.summary.dayTotalEarnings;
   });
 
   const summaryForRange: DailySummary = {
     lunch: {
-      rawFoodTotal: rangeFoodTotal,
-      rawDrinkTotal: rangeDrinkTotal,
+      rawFoodTotal: totalRawFood,
+      rawDrinkTotal: totalRawDrink,
       foodEarnings: 0,
       drinkEarnings: 0,
-      phulkasEarnings: 0
+      phulkasEarnings: totalLunchPhulkasEarnings
     },
     dinner: {
       rawFoodTotal: 0,
       rawDrinkTotal: 0,
       foodEarnings: 0,
       drinkEarnings: 0,
-      phulkasEarnings: 0
+      phulkasEarnings: totalDinnerPhulkasEarnings
     },
-    dayTotalEarnings: rangePhulkasEarnings
+    dayTotalEarnings: totalOverallPhulkasEarnings
   };
 
   return summaryForRange;
 };
 
 export const calculateDailySummariesForRange = (bills: Bill[]): { date: string; summary: DailySummary }[] => {
-  const dailySummariesMap: { [key: string]: {
-    lunch: MealSummary,
-    dinnerRawFoodTotal: number,
-    dinnerRawDrinkTotal: number,
-    lastDinnerIsOurFood: boolean,
-    lastDinnerNumWorkers: number
-  } } = {};
+  const dailyBillsMap: { [key: string]: Bill[] } = {};
 
   bills.forEach(bill => {
-    const billDate = format(bill.date, 'yyyy-MM-dd');
-    if (!dailySummariesMap[billDate]) {
-      dailySummariesMap[billDate] = {
-        lunch: getDefaultMealSummary(),
-        dinnerRawFoodTotal: 0,
-        dinnerRawDrinkTotal: 0,
-        lastDinnerIsOurFood: true,
-        lastDinnerNumWorkers: 1
-      };
+    const billDate = format(new Date(bill.date), 'yyyy-MM-dd');
+    if (!dailyBillsMap[billDate]) {
+      dailyBillsMap[billDate] = [];
     }
-
-    const currentDayData = dailySummariesMap[billDate];
-
-    if (bill.mealType === 'lunch') {
-      const mealSummary = calculateLunchMealSummary(bill.foodAmount, bill.drinkAmount);
-      currentDayData.lunch.rawFoodTotal += mealSummary.rawFoodTotal;
-      currentDayData.lunch.rawDrinkTotal += mealSummary.rawDrinkTotal;
-      currentDayData.lunch.foodEarnings += mealSummary.foodEarnings;
-      currentDayData.lunch.drinkEarnings += mealSummary.drinkEarnings;
-      currentDayData.lunch.phulkasEarnings += mealSummary.phulkasEarnings;
-    } else if (bill.mealType === 'dinner') {
-      currentDayData.dinnerRawFoodTotal += bill.foodAmount;
-      currentDayData.dinnerRawDrinkTotal += bill.drinkAmount;
-      currentDayData.lastDinnerIsOurFood = bill.isOurFood ?? true;
-      currentDayData.lastDinnerNumWorkers = bill.numberOfPeopleWorkingDinner ?? 1;
-    }
+    dailyBillsMap[billDate].push(bill);
   });
 
-  return Object.keys(dailySummariesMap)
+  return Object.keys(dailyBillsMap)
     .sort((a, b) => b.localeCompare(a))
     .map(date => {
-      const dayData = dailySummariesMap[date];
-      const finalizedDinnerSummary = calculateDinnerMealSummary(
-        dayData.dinnerRawFoodTotal,
-        dayData.dinnerRawDrinkTotal,
-        dayData.lastDinnerIsOurFood,
-        dayData.lastDinnerNumWorkers
-      );
-
-      const dailySummary: DailySummary = {
-        lunch: dayData.lunch,
-        dinner: finalizedDinnerSummary,
-        dayTotalEarnings: dayData.lunch.phulkasEarnings + finalizedDinnerSummary.phulkasEarnings
-      };
+      const billsForThisDay = dailyBillsMap[date];
+      const dailySummary = calculateDailyEarnings(billsForThisDay);
       return { date, summary: dailySummary };
     });
 };

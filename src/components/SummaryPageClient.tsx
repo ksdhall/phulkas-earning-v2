@@ -1,50 +1,86 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Box, Typography, CircularProgress, Alert, Button } from '@mui/material';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useParams } from 'next/navigation';
-import DateRangeFilter from '@/components/DateRangeFilter'; // Updated import
-import DailySummaryCard from '@/components/DailySummaryCard';
-import BillList from '@/components/BillList';
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  Alert,
+  Button,
+  TextField,
+  Paper,
+  Grid
+} from '@mui/material';
+import { format, parseISO } from 'date-fns';
+import { calculateRangeSummary, calculateDailySummariesForRange, DailySummary } from '@/lib/calculations';
+import DailySummaryCard from './DailySummaryCard';
+import BillList from './BillList';
 
-import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+interface SummaryPageClientProps {
+  locale: string;
+  initialBills: any[];
+  initialFromDate?: string;
+  initialToDate?: string;
+  initialError?: string | null;
+}
 
-import { Bill } from '@/types/Bill';
-import { calculateRangeSummary } from '@/lib/calculations';
-
-const SummaryPageClient: React.FC = () => {
+const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
+  locale,
+  initialBills,
+  initialFromDate,
+  initialToDate,
+  initialError,
+}) => {
   const t = useTranslations('summary');
+  const tDateFilter = useTranslations('date_range_filter');
   const tErrors = useTranslations('errors');
-  const params = useParams();
-  const locale = params.locale as string;
+  const tGeneral = useTranslations('general');
 
-  const initialFromDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-  const initialToDate = format(new Date(), 'yyyy-MM-dd'); // Default to today
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [bills, setBills] = useState<Bill[]>([]);
+  const [bills, setBills] = useState(initialBills);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentFromDate, setCurrentFromDate] = useState<string>(initialFromDate); // Renamed to avoid confusion with DateRangeFilter's internal state
-  const [currentToDate, setCurrentToDate] = useState<string>(initialToDate); // Renamed to avoid confusion
+  const [error, setError] = useState<string | null>(initialError);
+  const [fromDate, setFromDate] = useState<string>(initialFromDate || '');
+  const [toDate, setToDate] = useState<string>(initialToDate || '');
 
-  // Memoized calculation of range summary
+  // Helper for formatting currency (moved here for local use)
+  const formatCurrency = useCallback((amount: number | string) => {
+    let numericAmount: number;
+    if (typeof amount === 'string') {
+      const cleanedString = amount.replace(/[¥,]/g, '');
+      numericAmount = Number(cleanedString);
+    } else {
+      numericAmount = amount;
+    }
+    if (isNaN(numericAmount)) {
+      numericAmount = 0;
+    }
+    return `${tGeneral('currency')}${numericAmount.toLocaleString()}`;
+  }, [tGeneral]);
+
+
   const rangeSummary = useMemo(() => {
-    if (bills.length === 0) return null; // calculateRangeSummary already returns a default empty object
     return calculateRangeSummary(bills);
   }, [bills]);
 
-  // Function to fetch bills based on date range - Wrapped in useCallback
-  const fetchBills = useCallback(async (from: string, to: string) => {
-    if (!from || !to) {
-      setBills([]);
-      // setError(tErrors('dates_not_selected_for_fetch')); // Optionally, if you want an error for empty fetch
-      return;
-    }
+  const dailySummariesForRange = useMemo(() => {
+    return calculateDailySummariesForRange(bills);
+  }, [bills]);
 
+  useEffect(() => {
+    setBills(initialBills);
+    setFromDate(initialFromDate || '');
+    setToDate(initialToDate || '');
+    setError(initialError);
+  }, [initialBills, initialFromDate, initialToDate, initialError]);
+
+  const fetchBills = useCallback(async (from: string, to: string) => {
     setLoading(true);
     setError(null);
-
     try {
       const res = await fetch(`/${locale}/api/reports?from=${from}&to=${to}`);
       if (!res.ok) {
@@ -52,18 +88,16 @@ const SummaryPageClient: React.FC = () => {
         throw new Error(err.error || tErrors('failed_fetch'));
       }
       const data = await res.json();
-
-      const processedBills: Bill[] = data.bills.map((bill: any) => ({
+      const processedBills = data.bills.map((bill: any) => ({
         ...bill,
-        date: new Date(bill.date),
+        date: format(new Date(bill.date), 'yyyy-MM-dd'),
         mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
         isOurFood: bill.isOurFood ?? true,
         numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
       }));
       setBills(processedBills);
-
     } catch (err: any) {
-      console.error("Summary Page: Error fetching bills:", err);
+      console.error("Error fetching bills for summary range:", err);
       setError(err.message || tErrors('failed_fetch'));
       setBills([]);
     } finally {
@@ -71,66 +105,155 @@ const SummaryPageClient: React.FC = () => {
     }
   }, [locale, tErrors]);
 
-  // This is the handler that DateRangeFilter will call when its internal dates change and are valid
-  const handleApplyFilter = useCallback((from: string, to: string) => {
-    setCurrentFromDate(from);
-    setCurrentToDate(to);
-    fetchBills(from, to);
-  }, [fetchBills]);
+  const handleApplyFilter = () => {
+    if (!fromDate || !toDate) {
+      setError(tDateFilter('dates_not_selected'));
+      return;
+    }
 
-  // Initial fetch on component mount with default dates
-  useEffect(() => {
-    fetchBills(currentFromDate, currentToDate);
-  }, [currentFromDate, currentToDate, fetchBills]); // React to changes in currentFromDate/currentToDate
+    const fromDateObj = parseISO(fromDate);
+    const toDateObj = parseISO(toDate);
 
-  // Placeholder for edit/delete handlers
-  const handleEditBill = (id: number) => {
-    console.log("Edit bill from summary:", id);
-    // router.push(`/${locale}/edit/${id}`); // Uncomment if you have router here
+    if (isNaN(fromDateObj.getTime()) || isNaN(toDateObj.getTime())) {
+      setError(tDateFilter('invalid_date_format'));
+      return;
+    }
+    if (fromDateObj > toDateObj) {
+      setError(tDateFilter('from_date_after_to_date'));
+      return;
+    }
+
+    setError(null);
+    router.push(`/${locale}/summary?from=${fromDate}&to=${toDate}`);
   };
 
-  const handleDeleteBill = (id: number) => {
-    console.log("Delete bill from summary:", id);
-    // Implement delete logic or open confirm dialog
-  };
+  const handleDeleteBill = useCallback(async (billId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/${locale}/api/bills/${billId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || tErrors('failed_fetch'));
+      }
+      if (fromDate && toDate) {
+        await fetchBills(fromDate, toDate);
+      } else {
+        const defaultToDate = format(new Date(), 'yyyy-MM-dd');
+        const defaultFromDate = format(new Date(new Date().setDate(new Date().getDate() - 6)), 'yyyy-MM-dd');
+        await fetchBills(defaultFromDate, defaultToDate);
+      }
+    } catch (err: any) {
+      console.error("Error deleting bill from summary:", err);
+      setError(err.message || tErrors('failed_fetch'));
+    } finally {
+      setLoading(false);
+    }
+  }, [locale, fromDate, toDate, fetchBills, tErrors]);
+
+  const handleEditBill = useCallback((billId: string) => {
+    console.log(`Edit bill ID: ${billId} - Redirecting to dashboard for edit.`);
+    router.push(`/${locale}/dashboard?editBillId=${billId}`);
+  }, [router, locale]);
+
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 2 }}>
       <Typography variant="h4" gutterBottom>{t('title')}</Typography>
 
-      <DateRangeFilter
-        fromDate={currentFromDate} // Pass current state
-        toDate={currentToDate}   // Pass current state
-        onApplyFilter={handleApplyFilter} // This is the only handler needed now
-      />
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {loading && <CircularProgress sx={{ display: 'block', mx: 'auto', my: 2 }} />}
 
-      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Typography variant="h6" gutterBottom>{t('filter_title')}</Typography>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={5}>
+            <TextField
+              label={tDateFilter('from_date')}
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={5}>
+            <TextField
+              label={tDateFilter('to_date')}
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <Button variant="contained" onClick={handleApplyFilter} fullWidth>
+              {tDateFilter('apply_filter')}
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
 
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {!loading && rangeSummary && (
-        <Box sx={{ mt: 4 }}>
+      {!loading && bills.length > 0 && (
+        <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
           <Typography variant="h5" gutterBottom>
             {t('summary_for_range', {
-              fromDate: currentFromDate,
-              toDate: currentToDate
+              fromDate: fromDate || tGeneral('not_selected'),
+              toDate: toDate || tGeneral('not_selected')
             })}
           </Typography>
-          <DailySummaryCard summary={rangeSummary} />
-        </Box>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1">
+              {t('total_food', { amount: formatCurrency(rangeSummary.lunch.rawFoodTotal) })} {/* FIX */}
+            </Typography>
+            <Typography variant="body1">
+              {t('total_drinks', { amount: formatCurrency(rangeSummary.lunch.rawDrinkTotal) })} {/* FIX */}
+            </Typography>
+            <Typography variant="h6" sx={{ mt: 2 }}>
+              {t('phulkas_total_earnings', { amount: formatCurrency(rangeSummary.dayTotalEarnings) })} {/* FIX */}
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 1 }}>
+              {t('total_lunch_earnings_range', { amount: formatCurrency(rangeSummary.lunch.phulkasEarnings) })} {/* FIX */}
+            </Typography>
+            <Typography variant="body1">
+              {t('total_dinner_earnings_range', { amount: formatCurrency(rangeSummary.dinner.phulkasEarnings) })} {/* FIX */}
+            </Typography>
+          </Box>
+        </Paper>
       )}
 
-      {!loading && bills.length > 0 ? (
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h5" gutterBottom>{t('entries_in_range', { count: bills.length })}</Typography>
-          <BillList bills={bills} onEdit={handleEditBill} onDelete={handleDeleteBill} />
-        </Box>
-      ) : !loading && !bills.length && ( // Only show "no bills" if there are genuinely no bills after loading
-        <Typography sx={{ mt: 2 }}>{t('no_bills_found')}</Typography>
+      {!loading && bills.length > 0 && (
+        <>
+          <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+            {t('entries_in_range', { count: dailySummariesForRange.length })}
+          </Typography>
+          {dailySummariesForRange.map((dailyEntry) => (
+            <DailySummaryCard
+              key={dailyEntry.date}
+              date={dailyEntry.date}
+              summary={dailyEntry.summary}
+            />
+          ))}
+
+          <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+            {t('all_bills_in_range')}
+          </Typography>
+          <BillList
+            bills={bills}
+            onEdit={handleEditBill}
+            onDelete={handleDeleteBill}
+            showDateColumn={true}
+          />
+        </>
+      )}
+
+      {!loading && bills.length === 0 && !error && (
+        <Typography variant="body1" sx={{ mt: 2, textAlign: 'center' }}>
+          {t('no_bills_found')}
+        </Typography>
       )}
     </Box>
   );

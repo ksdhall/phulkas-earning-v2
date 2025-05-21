@@ -25,10 +25,13 @@
     "title": "売上サマリー",
     "filter_title": "期間で絞り込み",
     "summary_for_range": "{fromDate}から{toDate}までのサマリー",
-    "total_food": "食事代合計売上: {amount}",
-    "total_drinks": "飲み物代合計売上: {amount}",
+    "total_food": "総食事代: {amount}",
+    "total_drinks": "総飲み物代: {amount}",
     "phulkas_total_earnings": "フルカス合計売上: {amount}",
-    "entries_in_range": "期間内の請求書 ({count})",
+    "total_lunch_earnings_range": "ランチ合計売上: {amount}",
+    "total_dinner_earnings_range": "ディナー合計売上: {amount}",
+    "entries_in_range": "期間内の日次サマリー ({count})",
+    "all_bills_in_range": "期間内の全請求書",
     "no_bills_found": "選択された期間の請求書は見つかりませんでした。"
   },
   "date_range_filter": {
@@ -140,6 +143,7 @@
     "edit_button": "編集",
     "currency": "円",
     "yes": "はい",
-    "no": "いいえ"
+    "no": "いいえ",
+    "not_selected": "未選択"
   }
 }

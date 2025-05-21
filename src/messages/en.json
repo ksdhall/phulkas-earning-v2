@@ -25,10 +25,13 @@
     "title": "Earnings Summary",
     "filter_title": "Filter by Date Range",
     "summary_for_range": "Summary for {fromDate} to {toDate}",
-    "total_food": "Total Food Earnings: {amount}",
-    "total_drinks": "Total Drink Earnings: {amount}",
-    "phulkas_total_earnings": "Phulkas Total Earnings: {amount}",
-    "entries_in_range": "Bills in Range ({count})",
+    "total_food": "Total Raw Food Bills: {amount}",
+    "total_drinks": "Total Raw Drink Bills: {amount}",
+    "phulkas_total_earnings": "Overall Phulkas Earnings: {amount}",
+    "total_lunch_earnings_range": "Total Lunch Earnings: {amount}",
+    "total_dinner_earnings_range": "Total Dinner Earnings: {amount}",
+    "entries_in_range": "Daily Summaries in Range ({count})",
+    "all_bills_in_range": "All Bills in Range",
     "no_bills_found": "No bills found for the selected date range."
   },
   "date_range_filter": {
@@ -38,7 +41,7 @@
     "invalid_date_range": "Invalid date range. Please select valid dates.",
     "from_date_after_to_date": "From date cannot be after To date.",
     "dates_not_selected": "Please select both From and To dates.",
-    "invalid_date_format": "Invalid date format. Please use Букмекерлар-MM-DD."
+    "invalid_date_format": "Invalid date format. Please use YYYY-MM-DD."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -140,6 +143,7 @@
     "edit_button": "Edit",
     "currency": "JPY",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "not_selected": "Not Selected"
   }
 }
