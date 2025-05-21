@@ -1,10 +1,10 @@
 "use client";
 
 import React from 'react';
-import { Box, Typography, Paper, Grid } from '@mui/material';
+import { Box, Typography, Paper, Grid, useTheme, useMediaQuery } from '@mui/material'; // Import useTheme, useMediaQuery
 import { useTranslations } from 'next-intl';
 import { DailySummary, MealSummary } from '@/lib/calculations';
-import { AppConfig } from '@/config/app'; // Ensure AppConfig is imported
+import { AppConfig } from '@/config/app';
 
 interface DailySummaryCardProps {
   date?: string;
@@ -14,6 +14,9 @@ interface DailySummaryCardProps {
 const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) => {
   const t = useTranslations('dashboard');
   const tEarnings = useTranslations('earnings_details');
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Detect mobile screens
 
   if (!summary) {
     return (
@@ -45,27 +48,23 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
   const renderMealDetails = (meal: 'lunch' | 'dinner', mealSummary: MealSummary) => {
     const isLunch = meal === 'lunch';
     
-    // For dinner, pull additional info for detailed breakdown display
     const isOurFood = mealSummary.isOurFood ?? true;
     const numberOfPeopleWorkingDinner = mealSummary.numberOfPeopleWorkingDinner ?? 1;
     const effectiveWorkers = Math.max(1, numberOfPeopleWorkingDinner);
 
-    // These values are for display calculation breakdown, pulled from the logic in calculations.ts
     let directFoodEarningsDisplay = 0;
     let commonPoolFoodContributionDisplay = 0;
     let commonPoolDrinkContributionDisplay = 0;
     let totalCommonPoolDisplay = 0;
     let ourShareFromCommonPoolDisplay = 0;
 
-    if (!isLunch) { // Dinner specific calculations for display breakdown
-      // Direct food earnings for display
+    if (!isLunch) {
       if (isOurFood) {
         directFoodEarningsDisplay = mealSummary.rawFoodTotal * AppConfig.DINNER_FOOD_OUR_SHARE_PERCENT;
       } else {
-        directFoodEarningsDisplay = 0; // If not our food, no direct share
+        directFoodEarningsDisplay = 0;
       }
       
-      // Common pool contributions (always 25% of raw food, and 25% of raw drinks)
       commonPoolFoodContributionDisplay = mealSummary.rawFoodTotal * AppConfig.DINNER_FOOD_COMMON_POOL_PERCENT;
       commonPoolDrinkContributionDisplay = mealSummary.rawDrinkTotal * AppConfig.DINNER_DRINK_COMMON_POOL_PERCENT;
       
@@ -77,11 +76,9 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
       <Box sx={{ mt: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{t(`${meal}_summary`)}</Typography>
 
-        {/* Raw Totals from Bills for clarity */}
         <Typography variant="body2">{t('food_bills_total', { amount: formatCurrency(mealSummary.rawFoodTotal) })}</Typography>
         <Typography variant="body2">{t('drink_bills_total', { amount: formatCurrency(mealSummary.rawDrinkTotal) })}</Typography>
 
-        {/* Earnings Calculation Breakdown */}
         {isLunch ? (
           <>
             <Typography variant="caption" display="block" sx={{ mt: 1 }}>
@@ -101,14 +98,13 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
             <Typography variant="caption" display="block">
               {tEarnings('drink_calc_lunch', {
                 total: formatCurrency(mealSummary.rawDrinkTotal),
-                percentage: AppConfig.LUNCH_DRINK_SHARE_PERCENT * 100, // Pass percentage for display
+                percentage: AppConfig.LUNCH_DRINK_SHARE_PERCENT * 100,
                 share: formatCurrency(mealSummary.drinkEarnings)
               })}
             </Typography>
           </>
-        ) : ( // Dinner earnings breakdown
+        ) : (
           <>
-            {/* Direct Food Share (if our food) - only display if it's non-zero */}
             {isOurFood && directFoodEarningsDisplay > 0 && (
               <Typography variant="caption" display="block" sx={{ mt: 1 }}>
                 {tEarnings('dinner_food_direct_share', {
@@ -118,7 +114,6 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
               </Typography>
             )}
 
-            {/* Common Pool Contributions */}
             <Typography variant="caption" display="block" sx={{ mt: 1 }}>
               {tEarnings('dinner_common_pool_contrib_food', { amount: formatCurrency(commonPoolFoodContributionDisplay) })}
             </Typography>
@@ -137,7 +132,6 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
           </>
         )}
 
-        {/* Phulkas Total Earnings for the Meal */}
         <Typography variant="body1" color="primary" sx={{ fontWeight: 'bold', mt: 1 }}>
           {t(`phulkas_${meal}_earnings`, { amount: formatCurrency(mealSummary.phulkasEarnings) })}
         </Typography>
@@ -146,14 +140,22 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+    <Paper
+      elevation={3}
+      sx={{
+        p: 3,
+        mb: 3,
+        borderRadius: isMobile ? 2 : 3, // Smaller border radius on mobile
+        mx: isMobile ? 1 : 'auto', // Add some horizontal margin on mobile
+      }}
+    >
       {date && (
         <Typography variant="h6" gutterBottom>
           {t('summary_for_date', { date: date })}
         </Typography>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={isMobile ? 1 : 3}> {/* Reduce spacing on mobile */}
         <Grid item xs={12} sm={6}>
           {renderMealDetails('lunch', lunch)}
         </Grid>
@@ -162,7 +164,6 @@ const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ date, summary }) =>
           {renderMealDetails('dinner', dinner)}
         </Grid>
 
-        {/* Day Total Earnings */}
         <Grid item xs={12} sx={{ mt: 2 }}>
           <Typography variant="h6" color="secondary" sx={{ fontWeight: 'bold', borderTop: '1px solid #eee', pt: 1 }}>
             {t('day_total_earnings_header')}: {formatCurrency(dayTotalEarnings)}

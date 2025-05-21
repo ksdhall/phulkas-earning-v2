@@ -1,24 +1,17 @@
-// src/components/ThemeToggleButton.tsx
-"use client"; // This component also needs to be a Client Component
+"use client";
 
-import React from 'react';
-import { Box, IconButton } from '@mui/material';
-import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon for dark mode
-import Brightness7Icon from '@mui/icons-material/Brightness7'; // Sun icon for light mode
-// Import the useTheme hook from your theme context file
-import { useTheme } from '@/context/ThemeContext'; // Adjust the path if your context file is elsewhere
+import React, { useContext } from 'react';
+import { IconButton } from '@mui/material';
+import { Brightness4 as DarkModeIcon, Brightness7 as LightModeIcon } from '@mui/icons-material';
+import { ThemeContext } from './ThemeProviderWrapper'; // Import the ThemeContext
 
 const ThemeToggleButton: React.FC = () => {
-  // Use the custom theme hook to access current theme mode and toggle function
-  const { currentTheme, toggleTheme } = useTheme();
+  const { toggleColorMode, mode } = useContext(ThemeContext);
 
   return (
-    <Box sx={{ ml: 1 }}> {/* Add some margin */}
-      <IconButton sx={{ ml: 1 }} onClick={toggleTheme} color="inherit">
-        {/* Show sun icon in light mode, moon icon in dark mode */}
-        {currentTheme === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-      </IconButton>
-    </Box>
+    <IconButton sx={{ ml: 1 }} onClick={toggleColorMode} color="inherit">
+      {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+    </IconButton>
   );
 };
 

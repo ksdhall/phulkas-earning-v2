@@ -1,22 +1,23 @@
-// src/lib/calculations.ts
-import { Bill } from '@/types/Bill';
-import { format } from 'date-fns';
+import { Bill } from '@/types/bill';
 import { AppConfig } from '@/config/app';
+import { format } from 'date-fns';
 
-// Define the updated structure of the Daily/Range Summary
 export interface MealSummary {
   rawFoodTotal: number;
   rawDrinkTotal: number;
-  
-  foodEarnings: number; // For lunch: direct share. For dinner: direct 75% share (if isOurFood), 0 otherwise.
-  drinkEarnings: number; // For lunch: direct share. For dinner: our share from the common pool (food+drinks combined).
-  phulkasEarnings: number; // The final total from all sources (direct + common pool)
-  
-  isOurFood?: boolean; // Optional, only relevant for Dinner
-  numberOfPeopleWorkingDinner?: number; // Optional, only relevant for Dinner
+  foodEarnings: number;
+  drinkEarnings: number;
+  phulkasEarnings: number;
+  isOurFood?: boolean;
+  numberOfPeopleWorkingDinner?: number;
 }
 
-// Helper to get a default empty meal summary
+export interface DailySummary {
+  lunch: MealSummary;
+  dinner: MealSummary;
+  dayTotalEarnings: number;
+}
+
 const getDefaultMealSummary = (): MealSummary => ({
   rawFoodTotal: 0,
   rawDrinkTotal: 0,
@@ -25,27 +26,17 @@ const getDefaultMealSummary = (): MealSummary => ({
   phulkasEarnings: 0,
 });
 
-// Helper to get a default empty daily summary
-export interface DailySummary {
-  lunch: MealSummary;
-  dinner: MealSummary;
-  dayTotalEarnings: number;
-}
-
 const getDefaultDailySummary = (): DailySummary => ({
   lunch: getDefaultMealSummary(),
   dinner: getDefaultMealSummary(),
   dayTotalEarnings: 0,
 });
 
-// Calculation for Lunch Meal Summary
 const calculateLunchMealSummary = (foodAmount: number, drinkAmount: number): MealSummary => {
   const foodOverage = Math.max(0, foodAmount - AppConfig.LUNCH_FOOD_BASE_INCOME);
   const foodEarnings = AppConfig.LUNCH_FOOD_BASE_INCOME + (foodOverage * AppConfig.LUNCH_FOOD_OVERAGE_SHARE_PERCENT);
-
   const drinkEarnings = drinkAmount * AppConfig.LUNCH_DRINK_SHARE_PERCENT;
   const phulkasEarnings = foodEarnings + drinkEarnings;
-
   return {
     rawFoodTotal: foodAmount,
     rawDrinkTotal: drinkAmount,
@@ -55,45 +46,35 @@ const calculateLunchMealSummary = (foodAmount: number, drinkAmount: number): Mea
   };
 };
 
-// Calculation for Dinner Meal Summary (REVISED LOGIC based on user's latest clarification)
 const calculateDinnerMealSummary = (foodAmount: number, drinkAmount: number, isOurFood: boolean, numberOfPeopleWorkingDinner: number): MealSummary => {
   const effectiveWorkers = Math.max(1, numberOfPeopleWorkingDinner);
-
-  let directFoodEarnings = 0; // Our direct 75% share if 'Is Our Food?' is Yes
-  
-  // Common pool food contribution is ALWAYS 25% of the food bill for dinner
+  let directFoodEarnings = 0;
   const commonPoolFoodContribution = foodAmount * AppConfig.DINNER_FOOD_COMMON_POOL_PERCENT;
-  
-  // Drinks always contribute 25% to common pool for dinner
   const commonPoolDrinkContribution = drinkAmount * AppConfig.DINNER_DRINK_COMMON_POOL_PERCENT;
 
   if (isOurFood) {
-    directFoodEarnings = foodAmount * AppConfig.DINNER_FOOD_OUR_SHARE_PERCENT; // 75% direct share
+    directFoodEarnings = foodAmount * AppConfig.DINNER_FOOD_OUR_SHARE_PERCENT;
   } else {
-    directFoodEarnings = 0; // If NOT our food, 0% direct food earnings
+    directFoodEarnings = 0;
   }
 
   const totalCommonPool = commonPoolFoodContribution + commonPoolDrinkContribution;
   const ourShareFromCommonPool = totalCommonPool / effectiveWorkers;
-
   const phulkasEarnings = directFoodEarnings + ourShareFromCommonPool;
 
   return {
     rawFoodTotal: foodAmount,
     rawDrinkTotal: drinkAmount,
     foodEarnings: directFoodEarnings,
-    drinkEarnings: ourShareFromCommonPool, // This now represents our share from the common pool
+    drinkEarnings: ourShareFromCommonPool,
     phulkasEarnings: phulkasEarnings,
     isOurFood: isOurFood,
     numberOfPeopleWorkingDinner: numberOfPeopleWorkingDinner,
   };
 };
 
-
-// Function to calculate daily earnings for a list of bills (aggregating detailed MealSummary)
 export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
   const dailySummary: DailySummary = getDefaultDailySummary();
-
   let tempDinnerFoodTotal = 0;
   let tempDinnerDrinkTotal = 0;
   let tempDinnerIsOurFood: boolean = true;

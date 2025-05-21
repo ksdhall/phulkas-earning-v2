@@ -9,7 +9,8 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { AuthProvider } from '@/components/AuthProvider';
 import ThemeProviderWrapper from '@/components/ThemeProviderWrapper';
-import Layout from '@/components/Layout'; // <--- IMPORT YOUR LAYOUT COMPONENT HERE
+import Layout from '@/components/Layout';
+import { Head } from 'next/document'; // Import Head
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -32,12 +33,15 @@ export default async function RootLayout(props: Readonly<{
 
   return (
     <html lang={locale}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <NextIntlClientProvider messages={messages}>
             <ThemeProviderWrapper>
               <Layout>
-                {children} {/* Children here will be your actual page content */}
+                {children}
               </Layout>
             </ThemeProviderWrapper>
           </NextIntlClientProvider>

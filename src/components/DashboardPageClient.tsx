@@ -20,6 +20,7 @@ import IconButton from '@mui/material/IconButton';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import CloseIcon from '@mui/icons-material/Close';
+import { useTheme, useMediaQuery } from '@mui/material'; // Import useTheme, useMediaQuery
 
 import { format, addDays, subDays } from 'date-fns';
 import { useTranslations } from 'next-intl';
@@ -39,42 +40,40 @@ const DashboardPageClient: React.FC = () => {
   const formattedCurrentDate = format(currentDate, 'yyyy-MM-dd');
 
   const [billsForDate, setBillsForDate] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(false); // For main content loading (e.g., initial fetch, date change)
-  const [error, setError] = useState<string | null>(null); // For errors on the main dashboard page
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Modal specific states
-  const [isModalOpen, setIsModalOpen] = useState(false); // Controls Add/Edit Bill Dialog visibility
-  const [editingBillId, setEditingBillId] = useState<string | undefined>(undefined); // Stores ID of bill being edited
-  const [initialBillData, setInitialBillData] = useState<Bill | undefined>(undefined); // Stores data to pre-populate form for editing
-  const [isModalLoading, setIsModalLoading] = useState(false); // For loading state *within* the modal (e.g., fetching bill for edit or during form submission)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBillId, setEditingBillId] = useState<string | undefined>(undefined);
+  const [initialBillData, setInitialBillData] = useState<Bill | undefined>(undefined);
+  const [isModalLoading, setIsModalLoading] = useState(false);
 
-
-  // Delete confirmation states (centralized here)
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
   const [billToDeleteId, setBillToDeleteId] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false); // For delete alert/spinner on main page
-  const [deleteError, setDeleteError] = useState<string | null>(null); // For delete specific errors
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const t = useTranslations('dashboard');
   const tGeneral = useTranslations();
   const tBillForm = useTranslations('bill_form');
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Detect mobile screens
 
-  // Memoize the daily earnings calculation
+
   const dailySummary = useMemo(() => {
        return calculateDailyEarnings(billsForDate);
   }, [billsForDate]);
 
 
-  // Function to fetch bills for the current date - Wrapped in useCallback
   const fetchBillsForDate = useCallback(async (dateToFetch: Date) => {
      if (status !== 'authenticated') {
         console.log("Dashboard Page: Not authenticated, skipping fetch.");
         return;
      }
 
-    setLoading(true); // Set main content loading
-    setError(null); // Clear main page errors before fetching
+    setLoading(true);
+    setError(null);
 
     const formattedDateToFetch = format(dateToFetch, 'yyyy-MM-dd');
      console.log(`Dashboard Page: Fetching bills for date: ${formattedDateToFetch}`);
@@ -92,7 +91,7 @@ const DashboardPageClient: React.FC = () => {
       
       const processedBills: Bill[] = data.bills.map((bill: any) => ({
           ...bill,
-          date: format(new Date(bill.date), 'yyyy-MM-dd'), // Keep date as string for BillForm consistency
+          date: format(new Date(bill.date), 'yyyy-MM-dd'),
           mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
           isOurFood: bill.isOurFood ?? true,
           numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
@@ -101,15 +100,14 @@ const DashboardPageClient: React.FC = () => {
 
     } catch (err: any) {
       console.error("Dashboard Page: Error fetching bills for date:", formattedDateToFetch, err);
-      setError(err.message || tGeneral('errors.failed_fetch')); // Set error on main page
+      setError(err.message || tGeneral('errors.failed_fetch'));
       setBillsForDate([]);
     } finally {
-      setLoading(false); // End main content loading
+      setLoading(false);
     }
   }, [status, locale, tGeneral]);
 
 
-  // Effect to redirect to login if not authenticated
   useEffect(() => {
     if (status === 'loading') return;
     if (
@@ -120,7 +118,6 @@ const DashboardPageClient: React.FC = () => {
     }
   }, [status, router, locale, pathname]);
 
-  // Effect to fetch bills on initial load and when authentication status, locale, or currentDate changes
   useEffect(() => {
     if (status === 'authenticated') {
        console.log("Dashboard Page: Status authenticated, triggering fetch.");
@@ -129,29 +126,26 @@ const DashboardPageClient: React.FC = () => {
   }, [status, locale, currentDate, fetchBillsForDate]);
 
 
-  // --- Modal and Form Management ---
-
-  // Define handleCloseModal first as it's a dependency for others
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
-    setEditingBillId(undefined); // Clear editing ID on close
-    setInitialBillData(undefined); // Clear initial data on close
-    setError(null); // Clear any main page error that might have been set by form submission
-  }, []); // No dependencies for handleCloseModal itself, as it only sets state
+    setEditingBillId(undefined);
+    setInitialBillData(undefined);
+    setError(null);
+  }, []);
 
 
   const handleOpenAddModal = () => {
-    setEditingBillId(undefined); // Crucial: No bill ID means 'add' mode
-    setInitialBillData(undefined); // Crucial: No initial data for a new form
+    setEditingBillId(undefined);
+    setInitialBillData(undefined);
     setIsModalOpen(true);
-    setIsModalLoading(false); // Ensure modal loader is off initially for add
+    setIsModalLoading(false);
   };
 
   const handleOpenEditModal = useCallback(async (billId: string) => {
-    setEditingBillId(billId); // Set the bill ID for editing
-    setInitialBillData(undefined); // Clear previous initial data until new is fetched
-    setIsModalOpen(true); // Open the modal
-    setIsModalLoading(true); // Show loader *within* the modal while fetching
+    setEditingBillId(billId);
+    setInitialBillData(undefined);
+    setIsModalOpen(true);
+    setIsModalLoading(true);
 
     try {
       const response = await fetch(`/${locale}/api/bills/${billId}`);
@@ -160,29 +154,27 @@ const DashboardPageClient: React.FC = () => {
         throw new Error(errorData.error || `Error: ${response.status}`);
       }
       const data: Bill = await response.json();
-      // Format date to ISO string for TextField type="date" and ensure consistency
       const formattedData = {
         ...data,
-        date: format(new Date(data.date), 'yyyy-MM-dd'), // Ensure it's YYYY-MM-DD string
+        date: format(new Date(data.date), 'yyyy-MM-dd'),
         mealType: data.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
         isOurFood: data.isOurFood ?? true,
         numberOfPeopleWorkingDinner: data.numberOfPeopleWorkingDinner ?? 1,
       };
-      setInitialBillData(formattedData); // Set initial data for the form
+      setInitialBillData(formattedData);
     } catch (err: any) {
       console.error("Dashboard Page: Error fetching bill for edit modal:", err);
-      setError(err.message || tGeneral('errors.failed_fetch')); // Set error on main page
-      handleCloseModal(); // Close modal if fetch fails
+      setError(err.message || tGeneral('errors.failed_fetch'));
+      handleCloseModal();
     } finally {
-      setIsModalLoading(false); // End modal loading
+      setIsModalLoading(false);
     }
-  }, [locale, tGeneral, handleCloseModal]); // handleCloseModal is now defined
+  }, [locale, tGeneral, handleCloseModal]);
 
 
-  // This function is now called by BillForm's onSubmit
   const handleBillFormSubmit = useCallback(async (formData: Omit<Bill, 'id'>, currentBillId?: string) => {
-    setIsModalLoading(true); // Show loader within the modal during submission
-    setError(null); // Clear main page error before new submission
+    setIsModalLoading(true);
+    setError(null);
 
     const method = currentBillId ? 'PUT' : 'POST';
     const url = currentBillId ? `/${locale}/api/bills/${currentBillId}` : `/${locale}/api/bills`;
@@ -203,41 +195,39 @@ const DashboardPageClient: React.FC = () => {
       }
 
        console.log("Dashboard Page: Bill submitted successfully.");
-      handleCloseModal(); // Close the dialog
-      fetchBillsForDate(currentDate); // Refresh the list
+      handleCloseModal();
+      fetchBillsForDate(currentDate);
 
     } catch (err: any) {
       console.error("Dashboard Page: Error submitting bill:", err);
-      // Display error from API or general fetch error
       setError(err.message || (currentBillId ? tBillForm('edit_error') : tBillForm('add_error')));
     } finally {
-      setIsModalLoading(false); // End modal loading
+      setIsModalLoading(false);
     }
-  }, [locale, tGeneral, tBillForm, handleCloseModal, fetchBillsForDate, currentDate]); // Added all dependencies
+  }, [locale, tGeneral, tBillForm, handleCloseModal, fetchBillsForDate, currentDate]);
 
 
-   // --- Delete Confirmation --- (Centralized)
    const handleOpenConfirmDelete = (id: number) => {
         console.log("Dashboard Page: Opening delete confirm for bill ID:", id);
        setBillToDeleteId(id);
        setOpenConfirmDelete(true);
-       setDeleteError(null); // Clear any previous delete errors
+       setDeleteError(null);
    };
 
    const handleCloseConfirmDelete = () => {
         console.log("Dashboard Page: Closing delete confirm.");
        setOpenConfirmDelete(false);
        setBillToDeleteId(null);
-       setDeleteError(null); // Clear error on close
+       setDeleteError(null);
    };
 
    const handleDeleteBill = useCallback(async () => {
         if (billToDeleteId === null) return;
 
          console.log("Dashboard Page: Deleting bill with ID:", billToDeleteId);
-        setOpenConfirmDelete(false); // Close dialog immediately
-        setIsDeleting(true); // Set deleting state for main page loader/alert
-        setDeleteError(null); // Clear previous delete errors
+        setOpenConfirmDelete(false);
+        setIsDeleting(true);
+        setDeleteError(null);
 
         try {
             const res = await fetch(`/${locale}/api/bills/${billToDeleteId}`, {
@@ -252,18 +242,17 @@ const DashboardPageClient: React.FC = () => {
 
              console.log("Dashboard Page: Bill deleted successfully.");
              setBillToDeleteId(null);
-             fetchBillsForDate(currentDate); // Refresh the list
+             fetchBillsForDate(currentDate);
 
         } catch (err: any) {
              console.error("Dashboard Page: Error during delete fetch:", err);
              setDeleteError(err.message || tGeneral('errors.failed_fetch'));
         } finally {
-            setIsDeleting(false); // End deleting state
+            setIsDeleting(false);
         }
-   }, [billToDeleteId, locale, tGeneral, fetchBillsForDate, currentDate]); // Added dependencies
+   }, [billToDeleteId, locale, tGeneral, fetchBillsForDate, currentDate]);
 
 
-   // --- Date Navigation ---
    const handlePreviousDay = () => {
        console.log("Dashboard Page: Navigating to previous day.");
        setCurrentDate(prevDate => subDays(prevDate, 1));
@@ -275,10 +264,8 @@ const DashboardPageClient: React.FC = () => {
    };
 
 
-    // --- Render Logic ---
     let content;
 
-    // Show full-page loader for initial auth or main content loading
     if (status === 'loading' || (loading && !isModalOpen && !isDeleting)) {
         content = (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
@@ -292,7 +279,6 @@ const DashboardPageClient: React.FC = () => {
                  {t('title')}
                </Typography>
 
-               {/* Main page errors and info messages */}
                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
                {isDeleting && <Alert severity="info" sx={{ mb: 2 }}>{tGeneral('edit.deleting')}</Alert>}
@@ -309,7 +295,10 @@ const DashboardPageClient: React.FC = () => {
                     >
                         <ArrowBackIosIcon />
                     </IconButton>
-                    <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center' }}>
+                    <Typography
+                      variant={isMobile ? "h6" : "h5"} // Smaller font on mobile
+                      sx={{ flexGrow: 1, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} // Prevent wrapping
+                    >
                       {t('summary_for_date', { date: formattedCurrentDate })}
                     </Typography>
                     <IconButton onClick={handleNextDay} aria-label="next day"
@@ -320,7 +309,7 @@ const DashboardPageClient: React.FC = () => {
                 </Box>
 
 
-               {loading && ( // Only show loader for main content, not when modal is open for editing/adding
+               {loading && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
                       <CircularProgress />
                     </Box>
@@ -346,7 +335,6 @@ const DashboardPageClient: React.FC = () => {
                  </Typography>
                )}
 
-               {/* Add/Edit Bill Dialog */}
                <Dialog open={isModalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
                  <DialogTitle>
                    {editingBillId ? tBillForm('edit_title') : tBillForm('add_title')}
@@ -374,7 +362,6 @@ const DashboardPageClient: React.FC = () => {
                  </DialogContent>
                </Dialog>
 
-                   {/* Delete Confirmation Dialog - Centralized here */}
                    <Dialog
                        open={openConfirmDelete}
                        onClose={handleCloseConfirmDelete}
