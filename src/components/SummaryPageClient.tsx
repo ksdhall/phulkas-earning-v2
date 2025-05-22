@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; // Added useRef
 import { useTranslations } from 'next-intl';
 import {
   Container,
@@ -39,7 +39,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import DailyBillSummary from './DailyBillSummary';
+import DailyBillSummary from './DailyBillSummary'; // Correctly importing DailyBillSummary
 import { calculateDailySummariesForRange, DailySummary } from '@/lib/calculations';
 
 // Define the Bill type to match what's passed from summary/page.tsx and calculations.ts expects
@@ -93,6 +93,9 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   );
   
   const [selectedDailySummaryEntry, setSelectedDailySummaryEntry] = useState<{ date: string; summary: DailySummary } | null>(null);
+
+  // Ref for the DailyBillSummary section
+  const dailyBillSummaryRef = useRef<HTMLDivElement>(null);
 
   const dateFnsLocale = useMemo(() => {
     return locale === 'ja' ? ja : enUS;
@@ -169,11 +172,15 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
     const foundSummary = dailySummariesForRange.find(entry => entry.date === clickedFullDate);
     if (foundSummary) {
       setSelectedDailySummaryEntry(foundSummary);
+      // Scroll to the DailyBillSummary component on mobile
+      if (isMobile && dailyBillSummaryRef.current) {
+        dailyBillSummaryRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     } else {
       setSelectedDailySummaryEntry(null);
       console.error('No daily summary found for clicked date:', clickedFullDate);
     }
-  }, [dailySummariesForRange]);
+  }, [dailySummariesForRange, isMobile]); // Added isMobile to dependencies
 
   const dailyEarningsData = useMemo(() => {
     const chartData = dailySummariesForRange
@@ -305,7 +312,6 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    {/* CRITICAL FIX: Smaller font for X-axis */}
                     <XAxis dataKey="date" style={{ fontSize: '0.75rem' }} />
                     <YAxis tickFormatter={(value) => `¥${value.toLocaleString(locale)}`} style={{ fontSize: '0.75rem' }} />
                     <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
@@ -372,13 +378,23 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
         </Grid>
       </Grid>
 
+      {/* DailyBillSummary Section - Attach ref here */}
       {selectedDailySummaryEntry && (
-        <DailyBillSummary
-          date={selectedDailySummaryEntry.date}
-          dailySummary={selectedDailySummaryEntry.summary}
-          locale={locale}
-          onClose={() => setSelectedDailySummaryEntry(null)}
-        />
+        <Box ref={dailyBillSummaryRef} sx={{ mt: 4 }}> {/* Attach the ref */}
+          <DailyBillSummary
+            date={selectedDailySummaryEntry.date}
+            dailySummary={selectedDailySummaryEntry.summary}
+            locale={locale}
+            onClose={() => setSelectedDailySummaryEntry(null)}
+          />
+        </Box>
+      )}
+
+      {/* No bills found message */}
+      {!loading && !bills.length && (
+        <Typography sx={{ mt: 2 }}>
+          {t('no_bills_found')}
+        </Typography>
       )}
     </Container>
   );
