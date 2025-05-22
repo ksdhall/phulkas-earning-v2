@@ -42,7 +42,6 @@ const LoginForm: React.FC = () => {
       // Use translation for login error message
       setError(t('login_error'));
     } else {
-      console.log("Login successful, redirecting to dashboard.");
       // Redirect to the dashboard page for the current locale
       router.push(`/${locale}/dashboard`);
     }

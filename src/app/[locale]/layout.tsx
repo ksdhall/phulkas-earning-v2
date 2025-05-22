@@ -8,8 +8,8 @@ export default async function LocaleLayout(props: Readonly<{
   children: React.ReactNode;
   params: { locale: string };
 }>) {
-  const { children, params } = props; // FIX: Re-added children to destructuring
-  const { locale } = params; // Then destructure locale from params
+  const { children, params } = props; // Destructure params directly
+  const { locale } = params; // Access locale directly
 
   const locales = routing.locales;
   if (!locales.includes(locale as any)) notFound();

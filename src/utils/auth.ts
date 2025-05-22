@@ -16,6 +16,5 @@ import { authOptions } from "@/auth";
 export async function getSession() {
   // Call getServerSession with your authOptions to get the session
   const session = await getServerSession(authOptions);
-  console.log("getSession utility called, session:", session); // Log the session
   return session;
 }

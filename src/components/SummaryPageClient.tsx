@@ -153,8 +153,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   }, [locale, fromDate, toDate, fetchBills, tErrors]);
 
   const handleEditBill = useCallback((billId: string) => {
-    console.log(`Edit bill ID: ${billId} - Redirecting to dashboard for edit.`);
-    router.push(`/${locale}/dashboard?editBillId=${billId}`);
+     router.push(`/${locale}/dashboard?editBillId=${billId}`);
   }, [router, locale]);
 
 

@@ -1,24 +1,22 @@
-"use client";
+"use client"; // This is a client component
 
-import { NextIntlClientProvider } from 'next-intl';
-import { usePathname } from 'next/navigation';
+import { NextIntlClientProvider } from 'next-intl'; // Import from 'next-intl'
+import { usePathname } from 'next/navigation'; // Hook to get current pathname
 import React, { ReactNode } from 'react';
 
 interface NextIntlClientProviderWrapperProps {
   children: ReactNode;
-  // We will pass messages from the server to this wrapper
-  messages: Record<string, any>; // Use 'any' for messages as the structure can vary
+  messages: Record<string, any>; // Re-added messages prop to interface
+  timeZone: string; // Keep timeZone
 }
 
-export default function NextIntlClientProviderWrapper({ children, messages }: NextIntlClientProviderWrapperProps) {
-  // Get the current locale from the URL pathname.
-  // The pathname will be something like "/en/dashboard" or "/ja/summary".
+export default function NextIntlClientProviderWrapper({ children, messages, timeZone }: NextIntlClientProviderWrapperProps) {
   const pathname = usePathname();
-  // Extract locale from the first segment, default to 'en' if not found
-  const locale = pathname.split('/')[1] || 'en';
+  const locale = pathname.split('/')[1] || 'en'; // Derive locale from pathname
 
   return (
-    <NextIntlClientProvider messages={messages} locale={locale}>
+    // CRITICAL: NextIntlClientProvider now receives both 'locale' and 'messages' (and 'timeZone').
+    <NextIntlClientProvider messages={messages} locale={locale} timeZone={timeZone}>
       {children}
     </NextIntlClientProvider>
   );

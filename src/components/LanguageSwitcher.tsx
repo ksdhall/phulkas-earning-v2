@@ -9,15 +9,16 @@ import { useTranslations } from 'next-intl';
 const LanguageSwitcher: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const currentLocale = useLocale(); // Gets the locale from next-intl context
+  const currentLocale = useLocale();
 
   const t = useTranslations('language_switcher');
 
   const handleChange = (event: any) => {
     const newLocale = event.target.value;
-    // Replace the locale segment in the pathname
-    const newPathname = `/${newLocale}${pathname.substring(3)}`; // Assumes /xx/ path structure
-    router.push(newPathname);
+    const newPathname = `/${newLocale}${pathname.substring(3)}`;
+    
+    router.push(newPathname); // Perform client-side navigation
+    router.refresh(); // CRITICAL: Force a re-fetch of server components for the new locale
   };
 
   return (

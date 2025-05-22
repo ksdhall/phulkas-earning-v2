@@ -20,8 +20,6 @@ export async function GET(request: Request, { params }: { params: { locale: stri
       return NextResponse.json({ error: 'Invalid date format provided. Use YYYY-MM-DD.' }, { status: 400 });
     }
 
-    console.log(`API Reports: Querying bills between: ${fromDate.toISOString()} and ${toDate.toISOString()}`);
-
     const bills = await prisma.bill.findMany({
       where: {
         date: {

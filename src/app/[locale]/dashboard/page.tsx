@@ -13,12 +13,11 @@ interface DashboardPageProps {
 export default async function DashboardPage(props: DashboardPageProps) {
   const session = await getServerSession(authOptions);
 
-  const currentParams = props.params; // Get params explicitly
-  const currentLocale = currentParams.locale; // Access locale from the explicit params object
+  const { locale } = await props.params; // Access locale directly
 
   if (!session) {
-    redirect(`/${currentLocale}`);
+    redirect(`/${locale}`);
   }
 
-  return <DashboardPageClient locale={currentLocale} />;
+  return <DashboardPageClient locale={locale} />;
 }

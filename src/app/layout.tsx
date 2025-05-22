@@ -3,13 +3,12 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
-import { NextIntlClientProvider } from 'next-intl'; // Import from 'next-intl' (client side)
-// Removed getRequestConfig import
-// Removed getLocale, getMessages imports
-
+import getRequestConfig from '@/i18n/request';
+import { getLocale } from 'next-intl/server'; // Import getLocale
 import { AuthProvider } from '@/components/AuthProvider';
 import ThemeProviderWrapper from '@/components/ThemeProviderWrapper';
 import MuiRegistry from '@/components/MuiRegistry';
+import NextIntlClientProviderWrapper from '@/components/NextIntlClientProviderWrapper';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,17 +17,21 @@ export const metadata: Metadata = {
   description: "Track daily earnings",
 };
 
-export default function RootLayout({ // Changed back to a non-async function
+export default async function RootLayout({
   children,
+  params: { locale: rootLocaleParam }, // Destructure locale from params here
 }: Readonly<{
   children: React.ReactNode;
+  params: { locale: string }; // Add params to RootLayout props
 }>) {
-  // IMPORTANT: Do NOT call getLocale() or getMessages() or getRequestConfig() here.
-  // NextIntlClientProvider will automatically get the context from the middleware/i18n/request.ts setup.
-  // The 'locale' for html lang attribute will be set by next-intl automatically.
 
+  // Get the locale. Prioritize rootLocaleParam if available, otherwise use getLocale().
+  const currentRequestLocale = rootLocaleParam || await getLocale();
+  // Call getRequestConfig to get locale, messages, and timeZone for the HTML tag and client provider.
+  const { locale, messages, timeZone } = await getRequestConfig({ requestLocale: currentRequestLocale }); 
+  
   return (
-    <html lang="en"> {/* Set a default lang, next-intl will override based on route */}
+    <html lang={locale}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
@@ -36,10 +39,10 @@ export default function RootLayout({ // Changed back to a non-async function
         <AuthProvider>
           <MuiRegistry>
             <ThemeProviderWrapper>
-              {/* NextIntlClientProvider will automatically receive messages and locale from context */}
-              <NextIntlClientProvider>
+              {/* CRITICAL: Pass 'messages' here again. */}
+              <NextIntlClientProviderWrapper messages={messages} timeZone={timeZone}>
                 {children}
-              </NextIntlClientProvider>
+              </NextIntlClientProviderWrapper>
             </ThemeProviderWrapper>
           </MuiRegistry>
         </AuthProvider>

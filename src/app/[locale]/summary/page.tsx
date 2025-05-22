@@ -20,12 +20,12 @@ interface SummaryPageProps {
 export default async function SummaryPage(props: SummaryPageProps) {
   const session = await getServerSession(authOptions);
 
-  const currentParams = props.params;         // Get params explicitly
-  const currentSearchParams = props.searchParams; // Get searchParams explicitly
+  const currentParams = props.params;
+  const currentSearchParams = props.searchParams;
 
-  const locale = currentParams.locale;       // Access locale from the explicit params object
-  const from = currentSearchParams.from;     // Access from from the explicit searchParams object
-  const to = currentSearchParams.to;         // Access to from the explicit searchParams object
+  const locale = currentParams.locale;
+  const from = currentSearchParams.from;
+  const to = currentSearchParams.to;
 
   if (!session) {
     redirect(`/${locale}`);
