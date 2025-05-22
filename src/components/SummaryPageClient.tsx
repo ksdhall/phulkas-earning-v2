@@ -1,30 +1,67 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import {
-  Box,
+  Container,
   Typography,
+  Box,
   CircularProgress,
   Alert,
+  Grid, // Ensure Grid is imported
   Button,
-  TextField,
-  Paper,
-  Grid
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Card,
+  CardContent,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
-import { format, parseISO } from 'date-fns';
-import { calculateRangeSummary, calculateDailySummariesForRange, DailySummary } from '@/lib/calculations';
-import DailySummaryCard from './DailySummaryCard';
-import BillList from './BillList';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { format, parseISO, isValid, addDays } from 'date-fns';
+import { useRouter, usePathname } from 'next/navigation';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import DailyBillSummary from './DailyBillSummary';
+import { calculateDailySummariesForRange, DailySummary } from '@/lib/calculations';
+
+// Define the Bill type to match what's passed from summary/page.tsx and calculations.ts expects
+interface Bill {
+  id: string;
+  date: string; // ISO string 'yyyy-MM-dd'
+  foodAmount: number; // Now explicitly foodAmount
+  drinkAmount: number; // Now explicitly drinkAmount
+  mealType: 'lunch' | 'dinner';
+  isOurFood: boolean;
+  numberOfPeopleWorkingDinner: number;
+  comments?: string | null;
+}
 
 interface SummaryPageClientProps {
   locale: string;
-  initialBills: any[];
+  initialBills: Bill[];
   initialFromDate?: string;
   initialToDate?: string;
   initialError?: string | null;
 }
+
+// Define colors for the pie chart
+const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
 
 const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   locale,
@@ -34,226 +71,335 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   initialError,
 }) => {
   const t = useTranslations('summary');
-  const tDateFilter = useTranslations('date_range_filter');
-  const tErrors = useTranslations('errors');
   const tGeneral = useTranslations('general');
+  const tMealType = useTranslations('meal_type');
 
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [bills, setBills] = useState(initialBills);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(initialError);
-  const [fromDate, setFromDate] = useState<string>(initialFromDate || '');
-  const [toDate, setToDate] = useState<string>(initialToDate || '');
+  const [bills, setBills] = useState<Bill[]>(initialBills);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const formatCurrency = useCallback((amount: number | string) => {
-    let numericAmount: number;
-    if (typeof amount === 'string') {
-      const cleanedString = amount.replace(/[¥,]/g, '');
-      numericAmount = Number(cleanedString);
-    } else {
-      numericAmount = amount;
-    }
-    if (isNaN(numericAmount)) {
-      numericAmount = 0;
-    }
-    return `${tGeneral('currency')}${numericAmount.toLocaleString()}`;
-  }, [tGeneral]);
-
-
-  const rangeSummary = useMemo(() => {
-    return calculateRangeSummary(bills);
-  }, [bills]);
+  const [fromDate, setFromDate] = useState<Date | null>(
+    initialFromDate ? parseISO(initialFromDate) : null
+  );
+  const [toDate, setToDate] = useState<Date | null>(
+    initialToDate ? parseISO(initialToDate) : null
+  );
+  const [mealTypeFilter, setMealTypeFilter] = useState<'all' | 'lunch' | 'dinner'>('all');
+  
+  const [selectedDailySummaryEntry, setSelectedDailySummaryEntry] = useState<{ date: string; summary: DailySummary } | null>(null);
 
   const dailySummariesForRange = useMemo(() => {
-    return calculateDailySummariesForRange(bills);
+    const calculatedSummaries = calculateDailySummariesForRange(bills);
+    return calculatedSummaries;
   }, [bills]);
 
   useEffect(() => {
     setBills(initialBills);
-    setFromDate(initialFromDate || '');
-    setToDate(initialToDate || '');
     setError(initialError);
-  }, [initialBills, initialFromDate, initialToDate, initialError]);
+    if (initialFromDate) setFromDate(parseISO(initialFromDate));
+    if (initialToDate) setToDate(parseISO(initialToDate));
+    setSelectedDailySummaryEntry(null); 
+  }, [initialBills, initialError, initialFromDate, initialToDate]);
 
-  const fetchBills = useCallback(async (from: string, to: string) => {
+  const fetchBills = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    let fromDateStr = fromDate ? format(fromDate, 'yyyy-MM-dd') : '';
+    let toDateStr = toDate ? format(toDate, 'yyyy-MM-dd') : '';
+
+    if (!fromDate || !isValid(fromDate) || !toDate || !isValid(toDate)) {
+      setError(t('errors.invalid_date_range') || 'Invalid date range selected.');
+      setLoading(false);
+      return;
+    }
+    if (fromDate > toDate) {
+      setError(t('errors.date_range_order') || 'From date cannot be after To date.');
+      setLoading(false);
+      return;
+    }
+
+    const queryParams = new URLSearchParams();
+    queryParams.append('from', fromDateStr);
+    queryParams.append('to', toDateStr);
+
+    const apiUrl = `/api/reports?${queryParams.toString()}`;
+
     try {
-      const res = await fetch(`/${locale}/api/reports?from=${from}&to=${to}`);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || tErrors('failed_fetch'));
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch bills');
       }
-      const data = await res.json();
-      const processedBills = data.bills.map((bill: any) => ({
-        ...bill,
-        date: format(new Date(bill.date), 'yyyy-MM-dd'),
-        mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
-        isOurFood: bill.isOurFood ?? true,
-        numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
-      }));
-      setBills(processedBills);
+      const data: Bill[] = await response.json();
+      setBills(data);
     } catch (err: any) {
-      console.error("Error fetching bills for summary range:", err);
-      setError(err.message || tErrors('failed_fetch'));
-      setBills([]);
+      console.error('SummaryPageClient: Error fetching bills (client-side):', err);
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
-  }, [locale, tErrors]);
+  }, [fromDate, toDate, t]);
 
-  const handleApplyFilter = () => {
-    if (!fromDate || !toDate) {
-      setError(tDateFilter('dates_not_selected'));
-      return;
+  const handleApplyFilter = useCallback(() => {
+    const currentPath = pathname.replace(`/${locale}`, '');
+    const query = new URLSearchParams();
+    if (fromDate && isValid(fromDate)) {
+      query.append('from', format(fromDate, 'yyyy-MM-dd'));
     }
-
-    const fromDateObj = parseISO(fromDate);
-    const toDateObj = parseISO(toDate);
-
-    if (isNaN(fromDateObj.getTime()) || isNaN(toDateObj.getTime())) {
-      setError(tDateFilter('invalid_date_format'));
-      return;
+    if (toDate && isValid(toDate)) {
+      query.append('to', format(toDate, 'yyyy-MM-dd'));
     }
-    if (fromDateObj > toDateObj) {
-      setError(tDateFilter('from_date_after_to_date'));
-      return;
+    
+    router.push(`/${locale}${currentPath}?${query.toString()}`);
+    fetchBills();
+  }, [fromDate, toDate, pathname, router, locale, fetchBills]);
+
+  const handleBarClick = useCallback((data: { date: string; fullDate: string; earnings: number }) => {
+    const clickedFullDate = data.fullDate;
+    const foundSummary = dailySummariesForRange.find(entry => entry.date === clickedFullDate);
+    if (foundSummary) {
+      setSelectedDailySummaryEntry(foundSummary);
+    } else {
+      setSelectedDailySummaryEntry(null);
+      console.error('No daily summary found for clicked date:', clickedFullDate);
     }
+  }, [dailySummariesForRange]);
 
-    setError(null);
-    router.push(`/${locale}/summary?from=${fromDate}&to=${toDate}`);
-  };
+  const filteredBills = useMemo(() => {
+    return bills.filter(bill => {
+      if (mealTypeFilter === 'all') return true;
+      return bill.mealType === mealTypeFilter;
+    });
+  }, [bills, mealTypeFilter]);
 
-  const handleDeleteBill = useCallback(async (billId: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/${locale}/api/bills/${billId}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || tErrors('failed_fetch'));
-      }
-      if (fromDate && toDate) {
-        await fetchBills(fromDate, toDate);
-      } else {
-        const defaultToDate = format(new Date(), 'yyyy-MM-dd');
-        const defaultFromDate = format(new Date(new Date().setDate(new Date().getDate() - 6)), 'yyyy-MM-dd');
-        await fetchBills(defaultFromDate, defaultToDate);
-      }
-    } catch (err: any) {
-      console.error("Error deleting bill from summary:", err);
-      setError(err.message || tErrors('failed_fetch'));
-    } finally {
-      setLoading(false);
+  const dailyEarningsData = useMemo(() => {
+    const chartData = dailySummariesForRange
+      .map(entry => {
+        const parsedDate = parseISO(entry.date);
+        if (!isValid(parsedDate)) {
+          console.error('SummaryPageClient: Invalid date encountered:', entry.date);
+        }
+        const formattedDate = isValid(parsedDate) ? format(parsedDate, 'MMM dd') : 'Invalid Date';
+        return {
+          date: formattedDate,
+          fullDate: entry.date,
+          earnings: entry.summary.dayTotalEarnings,
+        };
+      })
+      .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
+    return chartData;
+  }, [dailySummariesForRange]);
+
+  const mealTypeDistributionData = useMemo(() => {
+    const mealTypeMap: { [key: string]: number } = {
+      lunch: 0,
+      dinner: 0,
+    };
+    filteredBills.forEach(bill => {
+      mealTypeMap[bill.mealType] += (bill.foodAmount + bill.drinkAmount);
+    });
+
+    const data = [];
+    if (mealTypeMap.lunch > 0) {
+      data.push({ name: tMealType('lunch'), value: mealTypeMap.lunch });
     }
-  }, [locale, fromDate, toDate, fetchBills, tErrors]);
+    if (mealTypeMap.dinner > 0) {
+      data.push({ name: tMealType('dinner'), value: mealTypeMap.dinner });
+    }
+    return data;
+  }, [filteredBills, tMealType]);
 
-  const handleEditBill = useCallback((billId: string) => {
-     router.push(`/${locale}/dashboard?editBillId=${billId}`);
-  }, [router, locale]);
-
+  const totalEarnings = useMemo(() => {
+    return dailySummariesForRange.reduce((sum, entry) => sum + entry.summary.dayTotalEarnings, 0);
+  }, [dailySummariesForRange]);
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h4" gutterBottom>{t('title')}</Typography>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        {t('summary_title')}
+      </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {loading && <CircularProgress sx={{ display: 'block', mx: 'auto', my: 2 }} />}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Typography variant="h6" gutterBottom>{t('filter_title')}</Typography>
-        <Grid container spacing={2} alignItems="center">
-          <Grid xs={12} sm={5}>
-            <TextField
-              label={tDateFilter('from_date')}
-              type="date"
+      {/* Filter controls */}
+      <Grid container spacing={3} alignItems="center" sx={{ mb: 4 }}>
+        {/* Removed 'item' and 'xs/sm/md' props, relying on spacing and default flex behavior */}
+        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={locale === 'ja' ? require('date-fns/locale/ja') : undefined}>
+            <DatePicker
+              label={t('from_date')}
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
+              onChange={(newValue) => setFromDate(newValue)}
+              slotProps={{ textField: { fullWidth: true, variant: 'outlined', size: 'small', sx: { borderRadius: 2 } } }}
             />
-          </Grid>
-          <Grid xs={12} sm={5}>
-            <TextField
-              label={tDateFilter('to_date')}
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid xs={12} sm={2}>
-            <Button variant="contained" onClick={handleApplyFilter} fullWidth>
-              {tDateFilter('apply_filter')}
-            </Button>
-          </Grid>
+          </LocalizationProvider>
         </Grid>
-      </Paper>
-
-      {!loading && bills.length > 0 && (
-        <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-          <Typography variant="h5" gutterBottom>
-            {t('summary_for_range', {
-              fromDate: fromDate || tGeneral('not_selected'),
-              toDate: toDate || tGeneral('not_selected')
-            })}
-          </Typography>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body1">
-              {t('total_food', { amount: formatCurrency(rangeSummary.lunch.rawFoodTotal) })}
-            </Typography>
-            <Typography variant="body1">
-              {t('total_drinks', { amount: formatCurrency(rangeSummary.lunch.rawDrinkTotal) })}
-            </Typography>
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              {t('phulkas_total_earnings', { amount: formatCurrency(rangeSummary.dayTotalEarnings) })}
-            </Typography>
-            <Typography variant="body1" sx={{ mt: 1 }}>
-              {t('total_lunch_earnings_range', { amount: formatCurrency(rangeSummary.lunch.phulkasEarnings) })}
-            </Typography>
-            <Typography variant="body1">
-              {t('total_dinner_earnings_range', { amount: formatCurrency(rangeSummary.dinner.phulkasEarnings) })}
-            </Typography>
-          </Box>
-        </Paper>
-      )}
-
-      {!loading && bills.length > 0 && (
-        <>
-          <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-            {t('entries_in_range', { count: dailySummariesForRange.length })}
-          </Typography>
-          {dailySummariesForRange.map((dailyEntry) => (
-            <DailySummaryCard
-              key={dailyEntry.date}
-              date={dailyEntry.date}
-              summary={dailyEntry.summary}
+        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={locale === 'ja' ? require('date-fns/locale/ja') : undefined}>
+            <DatePicker
+              label={t('to_date')}
+              value={toDate}
+              onChange={(newValue) => setToDate(newValue)}
+              slotProps={{ textField: { fullWidth: true, variant: 'outlined', size: 'small', sx: { borderRadius: 2 } } }}
             />
-          ))}
+          </LocalizationProvider>
+        </Grid>
+        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
+          <FormControl fullWidth variant="outlined" size="small" sx={{ borderRadius: 2 }}>
+            <InputLabel>{t('meal_type_filter')}</InputLabel>
+            <Select
+              value={mealTypeFilter}
+              label={t('meal_type_filter')}
+              onChange={(e) => setMealTypeFilter(e.target.value as 'all' | 'lunch' | 'dinner')}
+              sx={{ borderRadius: 2 }}
+            >
+              <MenuItem value="all">{tGeneral('all')}</MenuItem>
+              <MenuItem value="lunch">{tMealType('lunch')}</MenuItem>
+              <MenuItem value="dinner">{tMealType('dinner')}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleApplyFilter}
+            disabled={loading}
+            fullWidth
+            sx={{ height: '40px', borderRadius: 2 }}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : t('apply_filter')}
+          </Button>
+        </Grid>
+      </Grid>
 
-          <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-            {t('all_bills_in_range')}
+      {/* Total Earnings Card */}
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: 3 }}>
+        <CardContent>
+          <Typography variant="h5" component="h2" gutterBottom>
+            {t('total_earnings')}
           </Typography>
-          <BillList
-            bills={bills}
-            onEdit={handleEditBill}
-            onDelete={handleDeleteBill}
-            showDateColumn={true}
-          />
-        </>
-      )}
+          <Typography variant="h4" color="primary">
+            ¥{totalEarnings.toLocaleString(locale)}
+          </Typography>
+        </CardContent>
+      </Card>
 
-      {!loading && bills.length === 0 && !error && (
-        <Typography variant="body1" sx={{ mt: 2, textAlign: 'center' }}>
-          {t('no_bills_found')}
-        </Typography>
+      {/* Charts Grid Container */}
+      {/* Set display: 'grid' and gridTemplateColumns for explicit grid layout */}
+      <Grid container spacing={4} sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)' }, gap: theme.spacing(4) }}>
+        {/* Bar Chart Grid Item */}
+        {/* Each Grid child directly defines its span */}
+        <Grid sx={{
+          gridColumn: { xs: 'span 1', md: 'span 1' }, // Span 1 column at all sizes, but the template defines 1 or 2 columns
+          display: 'flex',
+          flexDirection: 'column', // Ensure internal content stacks
+          minWidth: 0, // Allow shrinking
+          height: '400px', // Fixed height for chart area
+        }}>
+          <Card
+            sx={{
+              borderRadius: 3,
+              boxShadow: 3,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>{t('daily_earnings_chart')}</Typography>
+              <Box sx={{ flexGrow: 1, width: '100%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={dailyEarningsData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
+                    <Legend />
+                    <Bar
+                      dataKey="earnings"
+                      name={t('earnings')}
+                      fill="#8884d8"
+                      radius={[10, 10, 0, 0]}
+                      onClick={handleBarClick}
+                      cursor="pointer"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Pie Chart Grid Item */}
+        <Grid sx={{
+          gridColumn: { xs: 'span 1', md: 'span 1' }, // Span 1 column at all sizes
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          height: '400px',
+        }}>
+          <Card
+            sx={{
+              borderRadius: 3,
+              boxShadow: 3,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>{t('meal_type_distribution_chart')}</Typography>
+              <Box sx={{ flexGrow: 1, width: '100%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={mealTypeDistributionData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={isMobile ? 80 : 120}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {mealTypeDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {selectedDailySummaryEntry && (
+        <DailyBillSummary
+          date={selectedDailySummaryEntry.date}
+          dailySummary={selectedDailySummaryEntry.summary}
+          locale={locale}
+          onClose={() => setSelectedDailySummaryEntry(null)}
+        />
       )}
-    </Box>
+    </Container>
   );
 };
 

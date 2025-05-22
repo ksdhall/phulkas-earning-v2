@@ -17,8 +17,8 @@ const LanguageSwitcher: React.FC = () => {
     const newLocale = event.target.value;
     const newPathname = `/${newLocale}${pathname.substring(3)}`;
     
-    router.push(newPathname); // Perform client-side navigation
-    router.refresh(); // CRITICAL: Force a re-fetch of server components for the new locale
+    router.push(newPathname);
+    router.refresh();
   };
 
   return (

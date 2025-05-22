@@ -1,4 +1,4 @@
-import { Bill } from '@/types/bill';
+import { Bill } from '@/types/bill'; // Ensure this Bill type has foodAmount and drinkAmount
 import { AppConfig } from '@/config/app';
 import { format } from 'date-fns';
 
@@ -8,8 +8,8 @@ export interface MealSummary {
   foodEarnings: number;
   drinkEarnings: number;
   phulkasEarnings: number;
-  isOurFood?: boolean;
-  numberOfPeopleWorkingDinner?: number;
+  isOurFood?: boolean; // Optional, only relevant for dinner calculations
+  numberOfPeopleWorkingDinner?: number; // Optional, only relevant for dinner calculations
 }
 
 export interface DailySummary {
@@ -32,6 +32,7 @@ const getDefaultDailySummary = (): DailySummary => ({
   dayTotalEarnings: 0,
 });
 
+// Original logic: takes foodAmount and drinkAmount separately for lunch
 const calculateLunchMealSummary = (foodAmount: number, drinkAmount: number): MealSummary => {
   const foodOverage = Math.max(0, foodAmount - AppConfig.LUNCH_FOOD_BASE_INCOME);
   const foodEarnings = AppConfig.LUNCH_FOOD_BASE_INCOME + (foodOverage * AppConfig.LUNCH_FOOD_OVERAGE_SHARE_PERCENT);
@@ -46,6 +47,7 @@ const calculateLunchMealSummary = (foodAmount: number, drinkAmount: number): Mea
   };
 };
 
+// Original logic: takes foodAmount and drinkAmount separately for dinner
 const calculateDinnerMealSummary = (foodAmount: number, drinkAmount: number, isOurFood: boolean, numberOfPeopleWorkingDinner: number): MealSummary => {
   const effectiveWorkers = Math.max(1, numberOfPeopleWorkingDinner);
   let directFoodEarnings = 0;
@@ -81,14 +83,20 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
 
   let tempDinnerFoodTotal = 0;
   let tempDinnerDrinkTotal = 0;
-  let tempDinnerIsOurFood: boolean = true;
-  let tempDinnerNumWorkers: number = 1;
+  let tempDinnerIsOurFood: boolean = true; // Default or last encountered
+  let tempDinnerNumWorkers: number = 1; // Default or last encountered
 
   bills.forEach(bill => {
     if (bill.mealType === 'lunch') {
-      totalLunchFoodAmount += bill.foodAmount;
-      totalLunchDrinkAmount += bill.drinkAmount;
+      totalLunchFoodAmount += bill.foodAmount; // Use foodAmount
+      totalLunchDrinkAmount += bill.drinkAmount; // Use drinkAmount
     } else if (bill.mealType === 'dinner') {
+      // For dinner, we need to aggregate the raw amounts, but calculate earnings based on the last bill's flags
+      // This aggregation logic for dinner might be a source of discrepancy if multiple dinner bills have different isOurFood/numWorkers.
+      // The dashboard's calculateDailyEarnings aggregates raw amounts for lunch, but for dinner, it seems to expect one set of flags per day.
+      // If multiple dinner bills exist for a day with different flags, this needs careful consideration.
+      // For now, we'll sum the raw amounts and use the flags from the *last* dinner bill encountered,
+      // which is how the original DashboardPageClient seemed to imply.
       tempDinnerFoodTotal += bill.foodAmount;
       tempDinnerDrinkTotal += bill.drinkAmount;
       tempDinnerIsOurFood = bill.isOurFood ?? true;
@@ -99,7 +107,7 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
   // Calculate Lunch Summary once with aggregated totals
   if (totalLunchFoodAmount > 0 || totalLunchDrinkAmount > 0) {
     const aggregatedLunchSummary = calculateLunchMealSummary(totalLunchFoodAmount, totalLunchDrinkAmount);
-    dailySummary.lunch = aggregatedLunchSummary; // Assign the calculated summary directly
+    dailySummary.lunch = aggregatedLunchSummary;
   }
 
   // Calculate Dinner Summary once with aggregated totals
@@ -110,7 +118,7 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
       tempDinnerIsOurFood,
       tempDinnerNumWorkers
     );
-    dailySummary.dinner = aggregatedDinnerSummary; // Assign the calculated summary directly
+    dailySummary.dinner = aggregatedDinnerSummary;
   }
 
   dailySummary.dayTotalEarnings = dailySummary.lunch.phulkasEarnings + dailySummary.dinner.phulkasEarnings;
@@ -169,7 +177,7 @@ export const calculateDailySummariesForRange = (bills: Bill[]): { date: string; 
   });
 
   return Object.keys(dailyBillsMap)
-    .sort((a, b) => b.localeCompare(a))
+    .sort((a, b) => b.localeCompare(a)) // Sort descending (latest date first)
     .map(date => {
       const billsForThisDay = dailyBillsMap[date];
       const dailySummary = calculateDailyEarnings(billsForThisDay);

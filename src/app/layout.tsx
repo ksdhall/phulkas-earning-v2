@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
 import getRequestConfig from '@/i18n/request';
-import { getLocale } from 'next-intl/server'; // Import getLocale
+// Removed getLocale as we will rely on params.locale directly
 import { AuthProvider } from '@/components/AuthProvider';
 import ThemeProviderWrapper from '@/components/ThemeProviderWrapper';
 import MuiRegistry from '@/components/MuiRegistry';
@@ -25,11 +25,10 @@ export default async function RootLayout({
   params: { locale: string }; // Add params to RootLayout props
 }>) {
 
-  // Get the locale. Prioritize rootLocaleParam if available, otherwise use getLocale().
-  const currentRequestLocale = rootLocaleParam || await getLocale();
-  // Call getRequestConfig to get locale, messages, and timeZone for the HTML tag and client provider.
-  const { locale, messages, timeZone } = await getRequestConfig({ requestLocale: currentRequestLocale }); 
-  
+  // CRITICAL FIX: Use rootLocaleParam directly as the locale for getRequestConfig.
+  // This is the locale segment from the URL (e.g., 'en', 'ja').
+  const { locale, messages, timeZone } = await getRequestConfig({ locale: rootLocaleParam }); 
+
   return (
     <html lang={locale}>
       <head>
@@ -39,7 +38,6 @@ export default async function RootLayout({
         <AuthProvider>
           <MuiRegistry>
             <ThemeProviderWrapper>
-              {/* CRITICAL: Pass 'messages' here again. */}
               <NextIntlClientProviderWrapper messages={messages} timeZone={timeZone}>
                 {children}
               </NextIntlClientProviderWrapper>

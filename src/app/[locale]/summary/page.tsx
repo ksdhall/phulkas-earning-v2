@@ -2,16 +2,27 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { redirect } from "next/navigation";
-import SummaryPageClient from '@/components/SummaryPageClient';
+import SummaryPageClient from "@/components/SummaryPageClient";
 import prisma from '@/lib/prisma';
-import { format } from 'date-fns';
-import { Bill } from '@/types/Bill';
+import { format, isValid } from 'date-fns';
+
+// Define the Bill type to match Prisma's output and what calculations.ts expects
+interface Bill {
+  id: string;
+  date: string; // ISO string 'yyyy-MM-dd'
+  foodAmount: number; // Now explicitly foodAmount
+  drinkAmount: number; // Now explicitly drinkAmount
+  mealType: 'lunch' | 'dinner';
+  isOurFood: boolean;
+  numberOfPeopleWorkingDinner: number;
+  comments?: string | null;
+}
 
 interface SummaryPageProps {
   params: {
     locale: string;
   };
-  searchParams: {
+  searchParams?: {
     from?: string;
     to?: string;
   };
@@ -20,12 +31,8 @@ interface SummaryPageProps {
 export default async function SummaryPage(props: SummaryPageProps) {
   const session = await getServerSession(authOptions);
 
-  const currentParams = props.params;
-  const currentSearchParams = props.searchParams;
-
-  const locale = currentParams.locale;
-  const from = currentSearchParams.from;
-  const to = currentSearchParams.to;
+  const { locale } = await Promise.resolve(props.params);
+  const currentSearchParams = await Promise.resolve(props.searchParams || {});
 
   if (!session) {
     redirect(`/${locale}`);
@@ -37,12 +44,16 @@ export default async function SummaryPage(props: SummaryPageProps) {
   let toDate: Date | null = null;
 
   try {
-    if (from && to) {
-      fromDate = new Date(from);
-      toDate = new Date(to);
+    const fromParam = currentSearchParams.from;
+    const toParam = currentSearchParams.to;
 
-      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-        throw new Error("Invalid date format. Please use Букмекерлар-MM-DD.");
+    // Determine date range for fetching
+    if (fromParam && toParam) {
+      fromDate = new Date(fromParam);
+      toDate = new Date(toParam);
+
+      if (isNaN(fromDate.getTime()) || !isValid(fromDate) || isNaN(toDate.getTime()) || !isValid(toDate)) {
+        throw new Error("Invalid date format in URL parameters. Please use Букмекерлар-MM-DD.");
       }
       if (fromDate > toDate) {
         throw new Error("From date cannot be after To date.");
@@ -51,7 +62,7 @@ export default async function SummaryPage(props: SummaryPageProps) {
       const adjustedToDate = new Date(toDate);
       adjustedToDate.setDate(adjustedToDate.getDate() + 1);
 
-      const fetchedBills = await prisma.bill.findMany({
+      const fetchedBillsRaw = await prisma.bill.findMany({
         where: {
           date: {
             gte: fromDate,
@@ -63,15 +74,34 @@ export default async function SummaryPage(props: SummaryPageProps) {
         },
       });
 
-      bills = fetchedBills.map(bill => ({
-        ...bill,
-        date: format(bill.date, 'yyyy-MM-dd'),
-        mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
-        isOurFood: bill.isOurFood ?? true,
-        numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
-      }));
+      bills = fetchedBillsRaw.map(bill => {
+        // Ensure foodAmount and drinkAmount are numbers
+        const foodAmountNum = typeof bill.foodAmount === 'string'
+          ? parseFloat(bill.foodAmount)
+          : Number(bill.foodAmount);
+        const drinkAmountNum = typeof bill.drinkAmount === 'string'
+          ? parseFloat(bill.drinkAmount)
+          : Number(bill.drinkAmount);
+
+        if (isNaN(foodAmountNum) || isNaN(drinkAmountNum)) {
+          console.error('SummaryPage (Server): NaN amount detected for bill:', bill);
+          throw new Error('Invalid foodAmount or drinkAmount found in bill data.');
+        }
+
+        return {
+          id: bill.id,
+          date: format(bill.date, 'yyyy-MM-dd'),
+          mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
+          foodAmount: foodAmountNum, // Pass foodAmount directly
+          drinkAmount: drinkAmountNum, // Pass drinkAmount directly
+          isOurFood: bill.isOurFood ?? true,
+          numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
+          comments: bill.comments ?? null,
+        };
+      });
 
     } else {
+      // Default date range (e.g., last 7 days) if no search params are provided
       const defaultToDate = new Date();
       const defaultFromDate = new Date();
       defaultFromDate.setDate(defaultFromDate.getDate() - 6);
@@ -82,7 +112,7 @@ export default async function SummaryPage(props: SummaryPageProps) {
       const adjustedDefaultToDate = new Date(defaultToDate);
       adjustedDefaultToDate.setDate(adjustedDefaultToDate.getDate() + 1);
 
-      const fetchedBills = await prisma.bill.findMany({
+      const fetchedBillsRaw = await prisma.bill.findMany({
         where: {
           date: {
             gte: defaultFromDate,
@@ -94,18 +124,35 @@ export default async function SummaryPage(props: SummaryPageProps) {
         },
       });
 
-      bills = fetchedBills.map(bill => ({
-        ...bill,
-        date: format(bill.date, 'yyyy-MM-dd'),
-        mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
-        isOurFood: bill.isOurFood ?? true,
-        numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
-      }));
+      bills = fetchedBillsRaw.map(bill => {
+        const foodAmountNum = typeof bill.foodAmount === 'string'
+          ? parseFloat(bill.foodAmount)
+          : Number(bill.foodAmount);
+        const drinkAmountNum = typeof bill.drinkAmount === 'string'
+          ? parseFloat(bill.drinkAmount)
+          : Number(bill.drinkAmount);
+
+        if (isNaN(foodAmountNum) || isNaN(drinkAmountNum)) {
+          console.error('SummaryPage (Server): NaN amount detected for default bill:', bill);
+          throw new Error('Invalid foodAmount or drinkAmount found in default bill data.');
+        }
+
+        return {
+          id: bill.id,
+          date: format(bill.date, 'yyyy-MM-dd'),
+          mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
+          foodAmount: foodAmountNum,
+          drinkAmount: drinkAmountNum,
+          isOurFood: bill.isOurFood ?? true,
+          numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
+          comments: bill.comments ?? null,
+        };
+      });
     }
   } catch (e: any) {
-    console.error("Error fetching bills for summary:", e);
+    console.error("SummaryPage (Server): Error fetching or processing bills:", e);
     error = e.message || "Failed to fetch summary data.";
-    bills = [];
+    bills = []; // Ensure bills is empty on error
   }
 
   return (
