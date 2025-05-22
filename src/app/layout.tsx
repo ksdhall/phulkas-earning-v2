@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
 import getRequestConfig from '@/i18n/request';
-// Removed getLocale as we will rely on params.locale directly
+import { getLocale } from 'next-intl/server';
 import { AuthProvider } from '@/components/AuthProvider';
 import ThemeProviderWrapper from '@/components/ThemeProviderWrapper';
 import MuiRegistry from '@/components/MuiRegistry';
@@ -19,15 +19,14 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-  params: { locale: rootLocaleParam }, // Destructure locale from params here
+  params: { locale: rootLocaleParam },
 }: Readonly<{
   children: React.ReactNode;
-  params: { locale: string }; // Add params to RootLayout props
+  params: { locale: string };
 }>) {
 
-  // CRITICAL FIX: Use rootLocaleParam directly as the locale for getRequestConfig.
-  // This is the locale segment from the URL (e.g., 'en', 'ja').
-  const { locale, messages, timeZone } = await getRequestConfig({ locale: rootLocaleParam }); 
+  const currentRequestLocale = rootLocaleParam || await getLocale();
+  const { locale, messages, timeZone } = await getRequestConfig({ requestLocale: currentRequestLocale });
 
   return (
     <html lang={locale}>
@@ -38,7 +37,8 @@ export default async function RootLayout({
         <AuthProvider>
           <MuiRegistry>
             <ThemeProviderWrapper>
-              <NextIntlClientProviderWrapper messages={messages} timeZone={timeZone}>
+              {/* CRITICAL FIX: Pass the locale prop here */}
+              <NextIntlClientProviderWrapper messages={messages} timeZone={timeZone} locale={locale}>
                 {children}
               </NextIntlClientProviderWrapper>
             </ThemeProviderWrapper>

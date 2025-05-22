@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react'; // CRITICAL FIX: Ensure useMemo is imported
 import { useTranslations } from 'next-intl';
 import {
   Container,
@@ -8,7 +8,7 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Grid, // Ensure Grid is imported
+  Grid,
   Button,
   FormControl,
   InputLabel,
@@ -23,6 +23,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, parseISO, isValid, addDays } from 'date-fns';
+import { enUS, ja } from 'date-fns/locale';
+
 import { useRouter, usePathname } from 'next/navigation';
 import {
   BarChart,
@@ -81,7 +83,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
 
   const [bills, setBills] = useState<Bill[]>(initialBills);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
 
   const [fromDate, setFromDate] = useState<Date | null>(
     initialFromDate ? parseISO(initialFromDate) : null
@@ -93,6 +95,10 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   
   const [selectedDailySummaryEntry, setSelectedDailySummaryEntry] = useState<{ date: string; summary: DailySummary } | null>(null);
 
+  const dateFnsLocale = useMemo(() => {
+    return locale === 'ja' ? ja : enUS;
+  }, [locale]);
+
   const dailySummariesForRange = useMemo(() => {
     const calculatedSummaries = calculateDailySummariesForRange(bills);
     return calculatedSummaries;
@@ -101,8 +107,8 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   useEffect(() => {
     setBills(initialBills);
     setError(initialError);
-    if (initialFromDate) setFromDate(parseISO(initialFromDate));
-    if (initialToDate) setToDate(parseISO(initialToDate));
+    setFromDate(initialFromDate && isValid(parseISO(initialFromDate)) ? parseISO(initialFromDate) : null);
+    setToDate(initialToDate && isValid(parseISO(initialToDate)) ? parseISO(initialToDate) : null);
     setSelectedDailySummaryEntry(null); 
   }, [initialBills, initialError, initialFromDate, initialToDate]);
 
@@ -110,8 +116,8 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
     setLoading(true);
     setError(null);
 
-    let fromDateStr = fromDate ? format(fromDate, 'yyyy-MM-dd') : '';
-    let toDateStr = toDate ? format(toDate, 'yyyy-MM-dd') : '';
+    let fromDateStr = fromDate && isValid(fromDate) ? format(fromDate, 'yyyy-MM-dd') : '';
+    let toDateStr = toDate && isValid(toDate) ? format(toDate, 'yyyy-MM-dd') : '';
 
     if (!fromDate || !isValid(fromDate) || !toDate || !isValid(toDate)) {
       setError(t('errors.invalid_date_range') || 'Invalid date range selected.');
@@ -157,8 +163,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
     }
     
     router.push(`/${locale}${currentPath}?${query.toString()}`);
-    fetchBills();
-  }, [fromDate, toDate, pathname, router, locale, fetchBills]);
+  }, [fromDate, toDate, pathname, router, locale]);
 
   const handleBarClick = useCallback((data: { date: string; fullDate: string; earnings: number }) => {
     const clickedFullDate = data.fullDate;
@@ -185,7 +190,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
         if (!isValid(parsedDate)) {
           console.error('SummaryPageClient: Invalid date encountered:', entry.date);
         }
-        const formattedDate = isValid(parsedDate) ? format(parsedDate, 'MMM dd') : 'Invalid Date';
+        const formattedDate = isValid(parsedDate) ? format(parsedDate, 'MMM dd', { locale: dateFnsLocale }) : 'Invalid Date';
         return {
           date: formattedDate,
           fullDate: entry.date,
@@ -194,7 +199,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
       })
       .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
     return chartData;
-  }, [dailySummariesForRange]);
+  }, [dailySummariesForRange, dateFnsLocale]);
 
   const mealTypeDistributionData = useMemo(() => {
     const mealTypeMap: { [key: string]: number } = {
@@ -233,9 +238,8 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
 
       {/* Filter controls */}
       <Grid container spacing={3} alignItems="center" sx={{ mb: 4 }}>
-        {/* Removed 'item' and 'xs/sm/md' props, relying on spacing and default flex behavior */}
         <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
-          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={locale === 'ja' ? require('date-fns/locale/ja') : undefined}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateFnsLocale}>
             <DatePicker
               label={t('from_date')}
               value={fromDate}
@@ -245,7 +249,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
           </LocalizationProvider>
         </Grid>
         <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
-          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={locale === 'ja' ? require('date-fns/locale/ja') : undefined}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateFnsLocale}>
             <DatePicker
               label={t('to_date')}
               value={toDate}
@@ -296,16 +300,14 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
       </Card>
 
       {/* Charts Grid Container */}
-      {/* Set display: 'grid' and gridTemplateColumns for explicit grid layout */}
       <Grid container spacing={4} sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)' }, gap: theme.spacing(4) }}>
         {/* Bar Chart Grid Item */}
-        {/* Each Grid child directly defines its span */}
         <Grid sx={{
-          gridColumn: { xs: 'span 1', md: 'span 1' }, // Span 1 column at all sizes, but the template defines 1 or 2 columns
+          gridColumn: { xs: 'span 1', md: 'span 1' },
           display: 'flex',
-          flexDirection: 'column', // Ensure internal content stacks
-          minWidth: 0, // Allow shrinking
-          height: '400px', // Fixed height for chart area
+          flexDirection: 'column',
+          minWidth: 0,
+          height: '400px',
         }}>
           <Card
             sx={{
@@ -347,7 +349,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
 
         {/* Pie Chart Grid Item */}
         <Grid sx={{
-          gridColumn: { xs: 'span 1', md: 'span 1' }, // Span 1 column at all sizes
+          gridColumn: { xs: 'span 1', md: 'span 1' },
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,

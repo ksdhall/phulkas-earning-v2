@@ -201,7 +201,8 @@
     "number_of_people_working_dinner": "ディナーの人数",
     "comments": "コメント (任意)",
     "save": "保存",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "comments_label": "コメント"
   },
   "general": {
     "add": "追加",

@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, usePathname } from 'next/navigation';
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react'; // CRITICAL FIX: Ensure useMemo is imported
 import BillForm from '@/components/BillForm';
 import DailySummaryCard from '@/components/DailySummaryCard';
 import BillList from '@/components/BillList';
@@ -23,6 +23,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTheme, useMediaQuery } from '@mui/material';
 
 import { format, addDays, subDays } from 'date-fns';
+import { enUS, ja } from 'date-fns/locale';
+
 import { useTranslations } from 'next-intl';
 
 import { Bill } from '@/types/Bill';
@@ -36,7 +38,12 @@ const DashboardPageClient: React.FC = () => {
   const pathname = usePathname();
 
   const [currentDate, setCurrentDate] = useState(new Date());
-  const formattedCurrentDate = format(currentDate, 'yyyy-MM-dd');
+
+  const dateFnsLocale = useMemo(() => {
+    return locale === 'ja' ? ja : enUS;
+  }, [locale]);
+
+  const formattedCurrentDate = format(currentDate, 'yyyy-MM-dd', { locale: dateFnsLocale });
 
   const [billsForDate, setBillsForDate] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,7 +90,7 @@ const DashboardPageClient: React.FC = () => {
 
       const processedBills: Bill[] = data.bills.map((bill: any) => ({
         ...bill,
-        date: format(new Date(bill.date), 'yyyy-MM-dd'),
+        date: format(new Date(bill.date), 'yyyy-MM-MM-dd'),
         mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
         isOurFood: bill.isOurFood ?? true,
         numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
@@ -143,7 +150,7 @@ const DashboardPageClient: React.FC = () => {
       const data: Bill = await response.json();
       const formattedData = {
         ...data,
-        date: format(new Date(data.date), 'yyyy-MM-dd'),
+        date: format(new Date(data.date), 'yyyy-MM-MM-dd'),
         mealType: data.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
         isOurFood: data.isOurFood ?? true,
         numberOfPeopleWorkingDinner: data.numberOfPeopleWorkingDinner ?? 1,
@@ -327,6 +334,7 @@ const DashboardPageClient: React.FC = () => {
               initialBill={initialBillData}
               onSubmit={handleBillFormSubmit}
               isSubmitting={isModalLoading}
+              defaultDate={currentDate}
             />
           </DialogContent>
         </Dialog>
@@ -356,9 +364,7 @@ const DashboardPageClient: React.FC = () => {
     content = null;
   }
 
-  return (
-    content
-  );
+  return content;
 };
 
 export default DashboardPageClient;

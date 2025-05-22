@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react'; // CRITICAL FIX: Ensure useMemo is imported
 import {
   Card,
   CardContent,
@@ -16,7 +16,9 @@ import {
 } from '@mui/material';
 import { useTranslations } from 'next-intl';
 import { format, parseISO } from 'date-fns';
-import { DailySummary, MealSummary } from '@/lib/calculations'; // Import DailySummary and MealSummary
+import { enUS, ja } from 'date-fns/locale';
+
+import { DailySummary, MealSummary } from '@/lib/calculations';
 
 interface DailyBillSummaryProps {
   date: string; // The selected date in 'yyyy-MM-dd' format
@@ -60,11 +62,15 @@ const MealSummaryDisplay: React.FC<{
 
 const DailyBillSummary: React.FC<DailyBillSummaryProps> = ({ date, dailySummary, locale, onClose }) => {
   const t = useTranslations('summary');
-  const tGeneral = useTranslations(); // Access general translations directly
+  const tGeneral = useTranslations();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const formattedDate = format(parseISO(date), 'PPP', { locale: locale === 'ja' ? require('date-fns/locale/ja') : undefined });
+  const dateFnsLocale = useMemo(() => {
+    return locale === 'ja' ? ja : enUS;
+  }, [locale]);
+
+  const formattedDate = format(parseISO(date), 'PPP', { locale: dateFnsLocale });
 
   return (
     <Card sx={{ mt: 4, mb: 4, borderRadius: 3, boxShadow: 3, width: '100%' }}>

@@ -201,7 +201,8 @@
     "number_of_people_working_dinner": "Number of People (Dinner)",
     "comments": "Comments (Optional)",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "comments_label": "Comments"
   },
   "general": {
     "add": "Add",

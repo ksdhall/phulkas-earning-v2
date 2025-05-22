@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   TextField,
   Button,
@@ -11,59 +11,74 @@ import {
   FormControlLabel,
   CircularProgress,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format, parseISO, isValid } from 'date-fns';
 import { useTranslations } from 'next-intl';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Bill } from '@/types/Bill';
-import { format } from 'date-fns';
+import { enUS, ja } from 'date-fns/locale';
 
 interface BillFormProps {
-  billId?: string; // Optional: for editing existing bills
-  initialBill?: Bill; // Data to pre-populate form when editing
-  onSubmit: (formData: Omit<Bill, 'id'>, billId?: string) => Promise<void>; // Callback to parent
-  isSubmitting: boolean; // Loading state from parent (for submit button)
+  billId?: string;
+  initialBill?: Bill;
+  onSubmit: (data: Omit<Bill, 'id'>, currentBillId?: string) => void;
+  isSubmitting?: boolean;
+  defaultDate?: Date;
 }
 
-const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSubmitting }) => {
+const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSubmitting, defaultDate }) => {
   const t = useTranslations('bill_form');
   const tMealType = useTranslations('meal_type');
   const tErrors = useTranslations('errors');
   const tGeneral = useTranslations('general');
 
   const router = useRouter();
-  const params = useParams();
-  const locale = params.locale as string;
+  const locale = router.locale as string;
 
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [mealType, setMealType] = useState<'lunch' | 'dinner'>('lunch');
-  const [foodAmount, setFoodAmount] = useState<number | ''>(0);
-  const [drinkAmount, setDrinkAmount] = useState<number | ''>(0);
-  const [isOurFood, setIsOurFood] = useState<boolean>(true);
-  const [numberOfPeopleWorkingDinner, setNumberOfPeopleWorkingDinner] = useState<number | ''>(1);
+  const [date, setDate] = useState<Date | null>(
+    initialBill?.date ? parseISO(initialBill.date) : (defaultDate || new Date())
+  );
+  const [foodAmount, setFoodAmount] = useState<number | ''>(initialBill?.foodAmount ?? 0);
+  const [drinkAmount, setDrinkAmount] = useState<number | ''>(initialBill?.drinkAmount ?? 0);
+  const [mealType, setMealType] = useState<Bill['mealType']>(initialBill?.mealType ?? 'lunch');
+  const [isOurFood, setIsOurFood] = useState<boolean>(initialBill?.isOurFood ?? true);
+  const [numberOfPeopleWorkingDinner, setNumberOfPeopleWorkingDinner] = useState<number | ''>(initialBill?.numberOfPeopleWorkingDinner ?? 1);
+  const [comments, setComments] = useState<string>(initialBill?.comments ?? '');
+  const [error, setError] = useState<{ [key: string]: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const [formError, setFormError] = useState<string | null>(null); // Internal form validation error
+  const dateFnsLocale = React.useMemo(() => {
+    return locale === 'ja' ? ja : enUS;
+  }, [locale]);
 
-  // Effect to populate form when initialBill data is provided (for editing)
   useEffect(() => {
     if (initialBill) {
-      setDate(initialBill.date); // initialBill.date is already 'YYYY-MM-DD' string from parent
-      setMealType(initialBill.mealType);
+      setDate(parseISO(initialBill.date));
       setFoodAmount(initialBill.foodAmount);
       setDrinkAmount(initialBill.drinkAmount);
-      setIsOurFood(initialBill.isOurFood ?? true);
-      setNumberOfPeopleWorkingDinner(initialBill.numberOfPeopleWorkingDinner ?? 1);
+      setMealType(initialBill.mealType);
+      setIsOurFood(initialBill.isOurFood);
+      setNumberOfPeopleWorkingDinner(initialBill.numberOfPeopleWorkingDinner);
+      setComments(initialBill.comments || ''); 
+      setFormError(null);
     } else {
-      // Reset form for adding new bill when initialBill is undefined
-      setDate(format(new Date(), 'yyyy-MM-dd'));
-      setMealType('lunch');
+      setDate(defaultDate || new Date());
       setFoodAmount(0);
       setDrinkAmount(0);
+      setMealType('lunch');
       setIsOurFood(true);
       setNumberOfPeopleWorkingDinner(1);
+      setComments('');
+      setFormError(null);
     }
-    setFormError(null); // Clear errors on initial load/reset
-  }, [initialBill]);
-
+  }, [initialBill, defaultDate]);
 
   const handleFoodAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -101,9 +116,9 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setFormError(null); // Clear previous form errors
+    setFormError(null);
 
     const finalFoodAmount = foodAmount === '' ? 0 : foodAmount;
     const finalDrinkAmount = drinkAmount === '' ? 0 : drinkAmount;
@@ -114,22 +129,20 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
       return;
     }
 
-    // Convert date to a consistent ISO 8601 string (e.g., "2025-05-20T00:00:00.000Z")
-    const dateAsISOString = new Date(`${date}T00:00:00`).toISOString();
+    const dateAsString = date ? format(date, 'yyyy-MM-dd') : '';
 
     const formDataToSend: Omit<Bill, 'id'> = {
-      date: dateAsISOString,
+      date: dateAsString,
       mealType,
       foodAmount: finalFoodAmount,
       drinkAmount: finalDrinkAmount,
       isOurFood,
       numberOfPeopleWorkingDinner: finalNumPeople,
+      comments: comments,
     };
 
-    // Call the onSubmit prop passed from the parent
-    // The parent (DashboardPageClient) is responsible for handling the API call (POST/PUT)
     await onSubmit(formDataToSend, billId);
-  };
+  }, [date, foodAmount, drinkAmount, mealType, isOurFood, numberOfPeopleWorkingDinner, comments, onSubmit, billId, t]);
 
   return (
     <Box
@@ -147,32 +160,29 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
         boxShadow: 'none',
       }}
     >
-      {/* Title is now handled by parent DialogTitle */}
       {formError && <Alert severity="error">{formError}</Alert>}
 
-      <TextField
-        label={t('date_label')}
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        fullWidth
-        required
-        InputLabelProps={{
-          shrink: true,
-        }}
-      />
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateFnsLocale}>
+        <DatePicker
+          label={t('date_label')}
+          value={date}
+          onChange={(newValue) => setDate(newValue)}
+          slotProps={{ textField: { fullWidth: true, required: true, InputLabelProps: { shrink: true } } }}
+        />
+      </LocalizationProvider>
 
-      <TextField
-        select
-        label={t('meal_type_label')}
-        value={mealType}
-        onChange={(e) => setMealType(e.target.value as 'lunch' | 'dinner')}
-        fullWidth
-        required
-      >
-        <MenuItem value="lunch">{tMealType('lunch')}</MenuItem>
-        <MenuItem value="dinner">{tMealType('dinner')}</MenuItem>
-      </TextField>
+      <FormControl fullWidth required>
+        <InputLabel id="meal-type-label">{t('meal_type_label')}</InputLabel>
+        <Select
+          labelId="meal-type-label"
+          value={mealType}
+          label={t('meal_type_label')}
+          onChange={(e) => setMealType(e.target.value as Bill['mealType'])}
+        >
+          <MenuItem value="lunch">{tMealType('lunch')}</MenuItem>
+          <MenuItem value="dinner">{tMealType('dinner')}</MenuItem>
+        </Select>
+      </FormControl>
 
       <TextField
         label={t('food_amount_label')}
@@ -222,19 +232,18 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
         </>
       )}
 
+      <TextField
+        label={t('comments_label')} // Use the correct translation key
+        multiline
+        rows={3}
+        value={comments}
+        onChange={(e) => setComments(e.target.value)}
+        fullWidth
+        InputLabelProps={{ shrink: true }} // CRITICAL FIX: Ensure label shrinks for multiline
+      />
+
       <Button type="submit" variant="contained" color="primary" disabled={isSubmitting} sx={{ mt: 2 }}>
         {isSubmitting ? <CircularProgress size={24} color="inherit" /> : (billId ? t('save_button') : tGeneral('add'))}
-      </Button>
-      {/* Cancel button now just closes the modal, handled by parent's Dialog */}
-      <Button type="button" variant="outlined" onClick={() => {
-        // This button is typically for navigating back if BillForm was a standalone page.
-        // In a modal context, the modal's onClose handles the "cancel" action.
-        // If you want a specific "cancel" action here that is different from modal close,
-        // you might need an additional prop for a cancel callback.
-        // For now, it will navigate to dashboard, which will effectively close the modal.
-        router.push(`/${locale}/dashboard`);
-      }} disabled={isSubmitting}>
-        {t('cancel_button')}
       </Button>
     </Box>
   );
