@@ -4,32 +4,18 @@
     "username_label": "ユーザー名",
     "password_label": "パスワード",
     "login_button": "サインイン",
-    "login_failed": "ログインに失敗しました。認証情報を確認してください。",
-    "signup_link": "アカウントをお持ちでないですか？ サインアップ",
-    "signup_title": "サインアップ",
-    "name_label": "名前",
-    "confirm_password_label": "パスワードを認証する",
-    "signup_button": "サインアップ",
-    "login_link": "すでにアカウントをお持ちですか？ ログイン",
-    "error_invalid_credentials": "無効なメールアドレスまたはパスワード",
-    "error_passwords_mismatch": "パスワードが一致しません",
-    "signing_in": "サインイン中...",
-    "signing_up": "サインアップ中..."
+    "login_error": "ログインに失敗しました。認証情報を確認してください。"
   },
   "auth": {
-    "unauthenticated": "このページを表示するにはログインしてください"
+    "unauthenticated": "このページを表示するにはログインしてください",
+    "login_failed": "ログインに失敗しました。認証情報を確認してください。"
   },
   "layout": {
     "app_title": "収益アプリ",
     "dashboard_link": "ダッシュボード",
-    "add_bill_link": "請求書を追加",
     "summary_link": "概要",
     "purchases_link": "仕入れ",
-    "sign_out_button": "サインアウト",
-    "dashboard": "ダッシュボード",
-    "bills": "請求書",
-    "summary": "概要",
-    "logout": "ログアウト"
+    "sign_out_button": "サインアウト"
   },
   "language_switcher": {
     "label": "言語",
@@ -38,20 +24,9 @@
   },
   "summary": {
     "title": "収益概要",
-    "filter_title": "日付範囲でフィルタ",
-    "summary_for_range": "{fromDate}から{toDate}までの概要",
-    "total_food": "生の食品代の合計：{amount}",
-    "total_drinks": "生の飲み物代の合計：{amount}",
-    "phulkas_total_earnings": "Phulkasの総収益：{amount}",
-    "total_lunch_earnings_range": "昼食の総収益：{amount}",
-    "total_dinner_earnings_range": "夕食の総収益：{amount}",
-    "entries_in_range": "範囲内の毎日の概要 ({count})",
-    "all_bills_in_range": "範囲内のすべての請求書",
-    "no_bills_found": "選択した日付範囲の請求書が見つかりません。",
     "summary_title": "収益概要と分析",
     "from_date": "開始日",
     "to_date": "終了日",
-    "meal_type_filter": "食事タイプフィルター",
     "apply_filter": "フィルターを適用",
     "total_earnings": "総収益",
     "daily_earnings_chart": "毎日の収益",
@@ -59,14 +34,17 @@
     "earnings": "収益",
     "daily_summary_for": "{date}の毎日の概要",
     "total_daily_earnings": "毎日の総収益：¥{amount}",
-    "is_our_food_label": "お店の食事？",
-    "num_people_dinner_label": "人数（夕食）",
-    "no_entries_for_day": "この日のエントリはありません。",
+    "no_bills_found": "選択した日付範囲の請求書が見つかりません。",
     "lunch_summary_title": "昼食の概要",
     "dinner_summary_title": "夕食の概要",
     "food_total": "食事代合計",
     "drink_total": "飲み物代合計",
-    "total_earnings_label": "総収益"
+    "total_earnings_label": "総収益",
+    "is_our_food_label": "お店の食事？",
+    "num_people_working_label": "人数（夕食）",
+    "no_lunch_entries": "昼食のエントリはありません",
+    "no_dinner_entries": "夕食のエントリはありません",
+    "all_bills_in_range": "範囲内のすべての請求書"
   },
   "date_range_filter": {
     "from_date": "開始日",
@@ -89,8 +67,6 @@
     "phulkas_lunch_earnings": "昼食の収益：{amount}",
     "phulkas_dinner_earnings": "夕食の収益：{amount}",
     "add_bill_entry": "新しい請求書エントリを追加",
-    "no_dinner_entries": "夕食のエントリはありません",
-    "no_lunch_entries": "昼食のエントリはありません",
     "no_entries_today": "今日のエントリはありません。",
     "no_summary_data": "この期間の概要データはありません。",
     "no_bills": "まだ請求書が記録されていません。最初の請求書を追加してください！",
@@ -118,18 +94,7 @@
     "dinner_common_pool_contrib_food": "食事代共通プール貢献：{amount}",
     "dinner_common_pool_contrib_drinks": "飲み物代共通プール貢献：{amount}",
     "total_common_pool": "共通プール合計：{amount}",
-    "our_common_pool_share": "共通プール分担：{amount} ({workers} 人)",
-    "phulkas_food_earnings": "Phulkas食事代分担：{amount}",
-    "dinner_food_calc_final": "夕食の食事代分担：{share} (生の{total}から)",
-    "title": "収益の詳細",
-    "date": "日付",
-    "meal_type": "食事の種類",
-    "amount": "金額",
-    "is_our_food": "お店の食事？",
-    "num_people_dinner": "人数（夕食）",
-    "comments": "コメント",
-    "yes": "はい",
-    "no": "いいえ"
+    "our_common_pool_share": "共通プール分担：{amount} ({workers} 人)"
   },
   "bill_list": {
     "date": "日付",
@@ -149,10 +114,7 @@
     "cancel": "キャンセル",
     "delete": "削除",
     "deleting": "請求書を削除しています...",
-    "delete_bill_error": "請求書の削除に失敗しました：{error}",
-    "bill_not_found": "請求書が見つかりません。",
-    "title": "請求書を編集",
-    "delete_bill_confirm": "この請求書を削除してもよろしいですか？"
+    "delete_bill_error": "請求書の削除に失敗しました：{error}"
   },
   "errors": {
     "failed_fetch": "データの取得に失敗しました。もう一度お試しください。",
@@ -183,36 +145,21 @@
     "edit_success": "請求書が正常に更新されました！",
     "add_error": "請求書の追加に失敗しました：{error}",
     "edit_error": "請求書の更新に失敗しました：{error}",
-    "food_amount_required": "食事代は必須です。",
-    "drink_amount_required": "飲み物代は必須です。",
-    "num_people_required": "夕食の人数は必須です。",
     "num_people_min": "夕食の人数は1以上である必要があります。",
-    "date": "日付",
-    "meal_type": "食事の種類",
-    "amount": "金額",
-    "is_our_food": "お店の食事？",
-    "number_of_people_working_dinner": "人数（夕食）",
-    "save": "保存",
-    "cancel": "キャンセル",
     "comments_label": "コメント"
   },
   "general": {
-    "add": "追加",
-    "add_bill": "新しい請求書を追加",
-    "edit_button": "編集",
     "currency": "¥",
     "yes": "はい",
     "no": "いいえ",
-    "not_selected": "選択されていません",
-    "all": "すべて",
     "close": "閉じる",
-    "comments": "コメント",
     "save": "保存",
     "cancel": "キャンセル",
-    "total_amount": "合計金額",
     "delete": "削除",
+    "edit_button": "編集",
     "from_date": "開始日",
-    "to_date": "終了日"
+    "to_date": "終了日",
+    "bills": "請求書"
   },
   "purchase_bill_form": {
     "add_title": "新しい仕入れ請求書を追加",
@@ -220,17 +167,12 @@
     "date_label": "日付",
     "amount_label": "金額",
     "description_label": "説明",
-    "comments_label": "コメント",
-    "add_success": "仕入れ請求書が正常に追加されました！",
-    "edit_success": "仕入れ請求書が正常に更新されました！",
-    "add_error": "仕入れ請求書の追加に失敗しました：{error}",
-    "edit_error": "仕入れ請求書の更新に失敗しました：{error}"
+    "comments_label": "コメント"
   },
   "purchases_page": {
     "title": "仕入れ請求書",
     "add_purchase_bill": "新しい仕入れ請求書を追加",
     "no_purchase_bills": "まだ仕入れ請求書が記録されていません。最初の仕入れを追加してください！",
-    "purchase_details": "仕入れ詳細",
     "total_purchase_amount": "仕入れ合計金額",
     "daily_purchase_trend": "毎日の仕入れ傾向"
   },
