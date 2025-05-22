@@ -1,87 +1,154 @@
 // src/theme.ts
-// This file defines the custom light and dark themes for the application.
-
 import { createTheme } from '@mui/material/styles';
-import { blueGrey, cyan, lightBlue } from '@mui/material/colors'; // Import colors
+import { Inter } from 'next/font/google';
 
-// Define the light theme
-export const lightTheme = createTheme({
-  palette: {
-    mode: 'light', // Set mode to light
-    primary: {
-      main: blueGrey[700], // A darker blue-grey for primary
-    },
-    secondary: {
-      main: cyan[600], // A cyan for secondary
-    },
-    background: {
-      default: '#f4f6f8', // Light background
-      paper: '#ffffff', // White paper background
-    },
-    text: {
-      primary: blueGrey[900], // Dark text
-      secondary: blueGrey[600], // Muted text
-    },
+const inter = Inter({
+  weight: ['300', '400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+// Define your light and dark palettes
+const lightPalette = {
+  primary: {
+    main: '#1976d2', // Blue
+    light: '#42a5f5',
+    dark: '#1565c0',
+    contrastText: '#fff', // White text on primary blue
   },
+  secondary: {
+    main: '#dc004e', // Pink
+    light: '#ff3378',
+    dark: '#9a0036',
+    contrastText: '#fff',
+  },
+  background: {
+    default: '#f4f6f8', // Light grey background
+    paper: '#ffffff', // White paper background
+  },
+  text: {
+    primary: '#212121', // Dark text
+    secondary: '#757575', // Grey text
+  },
+  divider: '#e0e0e0',
+  mode: 'light' as const, // Explicitly define mode
+};
+
+const darkPalette = {
+  primary: {
+    main: '#90caf9', // Light blue for primary in dark mode (e.g., AppBar, chart bars)
+    light: '#e3f2fd',
+    dark: '#42a5f5',
+    contrastText: '#000', // Black text on light primary for better contrast
+  },
+  secondary: {
+    main: '#f48fb1', // Light pink
+    light: '#ffc1e3',
+    dark: '#ad1457',
+    contrastText: '#000',
+  },
+  background: {
+    default: '#121212', // Dark background
+    paper: '#1e1e1e', // Darker paper background
+  },
+  text: {
+    primary: '#ffffff', // White text for primary readability
+    secondary: '#e0e0e0', // Very light grey for secondary text
+  },
+  divider: '#333333',
+  mode: 'dark' as const, // Explicitly define mode
+};
+
+// Create the light theme
+export const lightTheme = createTheme({
+  palette: lightPalette,
   typography: {
-    fontFamily: 'Roboto, sans-serif', // Use Roboto or your preferred font
+    fontFamily: inter.style.fontFamily,
   },
   components: {
-    MuiAppBar: {
+    MuiButton: {
       styleOverrides: {
         root: {
-          backgroundColor: blueGrey[800], // Darker AppBar in light mode
+          borderRadius: 8,
         },
       },
     },
-    MuiButton: {
-        styleOverrides: {
-            root: {
-                textTransform: 'none', // Prevent uppercase text
-            },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
         },
+      },
     },
-    // You can add more component customizations here
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 8,
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+        },
+      },
+    },
   },
 });
 
-// Define the dark theme (blueish)
+// Create the dark theme
 export const darkTheme = createTheme({
-  palette: {
-    mode: 'dark', // Set mode to dark
-    primary: {
-      main: lightBlue[500], // A vibrant blue for primary
-    },
-    secondary: {
-      main: cyan[300], // A lighter cyan for secondary
-    },
-    background: {
-      default: '#121212', // Very dark background
-      paper: '#1e1e1e', // Slightly lighter paper background
-    },
-    text: {
-      primary: '#ffffff', // White text
-      secondary: blueGrey[300], // Lighter muted text
-    },
+  palette: darkPalette,
+  typography: {
+    fontFamily: inter.style.fontFamily,
   },
-   typography: {
-    fontFamily: 'Roboto, sans-serif', // Use Roboto or your preferred font
-  },
-   components: {
-    MuiAppBar: {
+  components: {
+    MuiButton: {
       styleOverrides: {
         root: {
-          backgroundColor: blueGrey[900], // Even darker AppBar in dark mode
+          borderRadius: 8,
         },
       },
     },
-     MuiButton: {
-        styleOverrides: {
-            root: {
-                textTransform: 'none', // Prevent uppercase text
-            },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
         },
+      },
     },
-    // You can add more component customizations here
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 8,
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+        },
+      },
+    },
   },
 });

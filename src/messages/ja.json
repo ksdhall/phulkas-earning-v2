@@ -24,6 +24,7 @@
     "dashboard_link": "ダッシュボード",
     "add_bill_link": "請求書を追加",
     "summary_link": "概要",
+    "purchases_link": "仕入れ",
     "sign_out_button": "サインアウト",
     "dashboard": "ダッシュボード",
     "bills": "請求書",
@@ -161,7 +162,9 @@
     "positive_number": "正の数である必要があります",
     "invalid_date_range": "無効な日付範囲が選択されました。",
     "date_range_order": "開始日は終了日より前にする必要があります。",
-    "bill_not_found_for_date": "この日付の請求書が見つかりません。"
+    "bill_not_found_for_date": "この日付の請求書が見つかりません。",
+    "form_validation_failed": "フォームのエラーを修正してください。",
+    "no_purchase_bills_found": "選択した日付範囲の仕入れ請求書は見つかりません。"
   },
   "bill_form": {
     "add_title": "新しい請求書を追加",
@@ -197,12 +200,45 @@
     "add": "追加",
     "add_bill": "新しい請求書を追加",
     "edit_button": "編集",
-    "currency": "JPY",
+    "currency": "¥",
     "yes": "はい",
     "no": "いいえ",
     "not_selected": "選択されていません",
     "all": "すべて",
     "close": "閉じる",
-    "comments": "コメント"
+    "comments": "コメント",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "total_amount": "合計金額",
+    "delete": "削除",
+    "from_date": "開始日",
+    "to_date": "終了日"
+  },
+  "purchase_bill_form": {
+    "add_title": "新しい仕入れ請求書を追加",
+    "edit_title": "仕入れ請求書を編集",
+    "date_label": "日付",
+    "amount_label": "金額",
+    "description_label": "説明",
+    "comments_label": "コメント",
+    "add_success": "仕入れ請求書が正常に追加されました！",
+    "edit_success": "仕入れ請求書が正常に更新されました！",
+    "add_error": "仕入れ請求書の追加に失敗しました：{error}",
+    "edit_error": "仕入れ請求書の更新に失敗しました：{error}"
+  },
+  "purchases_page": {
+    "title": "仕入れ請求書",
+    "add_purchase_bill": "新しい仕入れ請求書を追加",
+    "no_purchase_bills": "まだ仕入れ請求書が記録されていません。最初の仕入れを追加してください！",
+    "purchase_details": "仕入れ詳細",
+    "total_purchase_amount": "仕入れ合計金額",
+    "daily_purchase_trend": "毎日の仕入れ傾向"
+  },
+  "purchase_bill_list": {
+    "date": "日付",
+    "amount": "金額",
+    "description": "説明",
+    "comments": "コメント",
+    "actions": "操作"
   }
 }

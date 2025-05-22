@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth';
 import prisma from '@/lib/prisma';
-import { MealType } from '@prisma/client'; // Import MealType enum from Prisma client
+import { MealType } from '@prisma/client';
 
 interface RouteParams {
   params: {
@@ -24,12 +24,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const { date, foodAmount, drinkAmount, mealType, isOurFood, numberOfPeopleWorkingDinner, comments } = body;
 
-    // Basic validation
     if (!date || foodAmount === undefined || drinkAmount === undefined || !mealType || isOurFood === undefined || numberOfPeopleWorkingDinner === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // CRITICAL FIX: Map string mealType to Prisma Enum
     const prismaMealType = mealType.toUpperCase() as MealType;
 
     const updatedBill = await prisma.bill.update({
@@ -40,7 +38,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         date: new Date(date),
         foodAmount: parseFloat(foodAmount),
         drinkAmount: parseFloat(drinkAmount),
-        mealType: prismaMealType, // Use the mapped enum value
+        mealType: prismaMealType,
         isOurFood: isOurFood,
         numberOfPeopleWorkingDinner: numberOfPeopleWorkingDinner,
         comments: comments,

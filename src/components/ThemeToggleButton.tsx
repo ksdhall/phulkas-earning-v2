@@ -1,16 +1,25 @@
 "use client";
 
 import React, { useContext } from 'react';
-import { IconButton } from '@mui/material';
-import { Brightness4 as DarkModeIcon, Brightness7 as LightModeIcon } from '@mui/icons-material';
+import IconButton from '@mui/material/IconButton';
+import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon for dark mode
+import Brightness7Icon from '@mui/icons-material/Brightness7'; // Sun icon for light mode
 import { ThemeContext } from './ThemeProviderWrapper'; // Import the ThemeContext
 
 const ThemeToggleButton: React.FC = () => {
-  const { toggleColorMode, mode } = useContext(ThemeContext);
+  const themeContext = useContext(ThemeContext);
+
+  if (!themeContext) {
+    // This should ideally not happen if ThemeProviderWrapper is correctly wrapping the app
+    console.error('ThemeContext not found. Ensure ThemeToggleButton is wrapped by ThemeProviderWrapper.');
+    return null;
+  }
+
+  const { toggleTheme, mode } = themeContext;
 
   return (
-    <IconButton sx={{ ml: 1 }} onClick={toggleColorMode} color="inherit">
-      {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+    <IconButton onClick={toggleTheme} color="inherit" aria-label="toggle theme">
+      {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
     </IconButton>
   );
 };

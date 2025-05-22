@@ -24,6 +24,7 @@
     "dashboard_link": "Dashboard",
     "add_bill_link": "Add Bill",
     "summary_link": "Summary",
+    "purchases_link": "Purchases",
     "sign_out_button": "Sign Out",
     "dashboard": "Dashboard",
     "bills": "Bills",
@@ -161,7 +162,9 @@
     "positive_number": "Must be a positive number",
     "invalid_date_range": "Invalid date range selected.",
     "date_range_order": "From date cannot be after To date.",
-    "bill_not_found_for_date": "No bills found for this date."
+    "bill_not_found_for_date": "No bills found for this date.",
+    "form_validation_failed": "Please correct the errors in the form.",
+    "no_purchase_bills_found": "No purchase bills found for the selected date range."
   },
   "bill_form": {
     "add_title": "Add New Bill",
@@ -197,12 +200,45 @@
     "add": "Add",
     "add_bill": "Add New Bill",
     "edit_button": "Edit",
-    "currency": "JPY",
+    "currency": "¥",
     "yes": "Yes",
     "no": "No",
     "not_selected": "Not Selected",
     "all": "All",
     "close": "Close",
-    "comments": "Comments"
+    "comments": "Comments",
+    "save": "Save",
+    "cancel": "Cancel",
+    "total_amount": "Total Amount",
+    "delete": "Delete",
+    "from_date": "From Date",
+    "to_date": "To Date"
+  },
+  "purchase_bill_form": {
+    "add_title": "Add New Purchase Bill",
+    "edit_title": "Edit Purchase Bill",
+    "date_label": "Date",
+    "amount_label": "Amount",
+    "description_label": "Description",
+    "comments_label": "Comments",
+    "add_success": "Purchase bill added successfully!",
+    "edit_success": "Purchase bill updated successfully!",
+    "add_error": "Failed to add purchase bill: {error}",
+    "edit_error": "Failed to update purchase bill: {error}"
+  },
+  "purchases_page": {
+    "title": "Purchase Bills",
+    "add_purchase_bill": "Add New Purchase Bill",
+    "no_purchase_bills": "No purchase bills recorded yet. Add your first purchase!",
+    "purchase_details": "Purchase Details",
+    "total_purchase_amount": "Total Purchase Amount",
+    "daily_purchase_trend": "Daily Purchase Trend"
+  },
+  "purchase_bill_list": {
+    "date": "Date",
+    "amount": "Amount",
+    "description": "Description",
+    "comments": "Comments",
+    "actions": "Actions"
   }
 }

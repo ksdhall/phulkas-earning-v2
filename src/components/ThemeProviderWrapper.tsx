@@ -1,113 +1,44 @@
 "use client";
 
-import React, { createContext, useMemo, useState, useEffect, ReactNode } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import React, { useState, useMemo, useEffect, createContext, useContext, useCallback } from 'react'; // Added useCallback here
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { lightTheme, darkTheme } from '@/theme';
 
 interface ThemeContextType {
-  toggleColorMode: () => void;
+  toggleTheme: () => void;
   mode: 'light' | 'dark';
 }
 
-export const ThemeContext = createContext<ThemeContextType>({
-  toggleColorMode: () => {},
-  mode: 'light',
-});
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 interface ThemeProviderWrapperProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const ThemeProviderWrapper: React.FC<ThemeProviderWrapperProps> = ({ children }) => {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    try {
-      const storedMode = localStorage.getItem('phulkas-theme-mode') as 'light' | 'dark';
-      if (storedMode) {
-        setMode(storedMode);
-      }
-    } catch (error) {
-      console.error("Failed to read theme from localStorage:", error);
+    const savedMode = localStorage.getItem('themeMode') as 'light' | 'dark';
+    if (savedMode) {
+      setMode(savedMode);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setMode('dark');
     }
   }, []);
 
-  const themeContextValue = useMemo(
-    () => ({
-      toggleColorMode: () => {
-        setMode((prevMode) => {
-          const newMode = prevMode === 'light' ? 'dark' : 'light';
-          try {
-            localStorage.setItem('phulkas-theme-mode', newMode);
-          } catch (error) {
-            console.error("Failed to save theme to localStorage:", error);
-          }
-          return newMode;
-        });
-      },
-      mode,
-    }),
-    [mode],
-  );
+  const theme = useMemo(() => (mode === 'light' ? lightTheme : darkTheme), [mode]);
 
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode,
-          primary: {
-            main: mode === 'light' ? '#1976d2' : '#90caf9',
-          },
-          secondary: {
-            main: mode === 'light' ? '#dc004e' : '#f48fb1',
-          },
-          background: {
-            default: mode === 'light' ? '#f5f5f5' : '#121212',
-            paper: mode === 'light' ? '#ffffff' : '#1e1e1e',
-          },
-          text: {
-            primary: mode === 'light' ? '#212121' : '#e0e0e0',
-            secondary: mode === 'light' ? '#757575' : '#bdbdbd',
-          },
-        },
-        typography: {
-          fontFamily: 'Inter, sans-serif',
-        },
-        components: {
-          MuiButton: {
-            styleOverrides: {
-              root: {
-                borderRadius: 8,
-              },
-            },
-          },
-          MuiPaper: {
-            styleOverrides: {
-              root: {
-                borderRadius: 12,
-              },
-            },
-          },
-          MuiDialog: {
-            styleOverrides: {
-              paper: {
-                borderRadius: 12,
-              },
-            },
-          },
-          MuiTextField: {
-            styleOverrides: {
-              root: {
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 8,
-                },
-              },
-            },
-          },
-        },
-      }),
-    [mode],
-  );
+  const toggleTheme = useCallback(() => {
+    setMode((prevMode) => {
+      const newMode = prevMode === 'light' ? 'dark' : 'light';
+      localStorage.setItem('themeMode', newMode);
+      return newMode;
+    });
+  }, []);
+
+  const themeContextValue = useMemo(() => ({ toggleTheme, mode }), [toggleTheme, mode]);
 
   return (
     <ThemeContext.Provider value={themeContextValue}>

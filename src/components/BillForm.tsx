@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useCallback
 import {
   TextField,
   Button,
@@ -31,7 +31,7 @@ interface BillFormProps {
   onSubmit: (data: Omit<Bill, 'id'>, currentBillId?: string) => void;
   isSubmitting?: boolean;
   defaultDate?: Date;
-  onCancel: () => void; // Passed from parent to close modal
+  onCancel: () => void;
 }
 
 const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSubmitting, defaultDate, onCancel }) => {
@@ -82,7 +82,7 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
     setError({});
   }, [initialBill, defaultDate]);
 
-  const validateForm = useCallback(() => {
+  const validateForm = useCallback(() => { // Using useCallback
     const newErrors: { [key: string]: string } = {};
 
     if (!date || !isValid(date)) {
@@ -105,7 +105,7 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
     return Object.keys(newErrors).length === 0;
   }, [date, foodAmount, drinkAmount, mealType, numberOfPeopleWorkingDinner, tErrors, t]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => { // Using useCallback
     e.preventDefault();
 
     if (!validateForm()) {

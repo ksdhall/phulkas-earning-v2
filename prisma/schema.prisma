@@ -77,3 +77,12 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+
+model PurchaseBill {
+  id          Int      @id @default(autoincrement())
+  date        DateTime  // Date of the purchase
+  amount      Float    // Total cost of the purchase
+  description String   // e.g., "Vegetables from market", "Meat supplier", "Grocery store"
+  comments    String?  // Optional detailed comments about the purchase
+}

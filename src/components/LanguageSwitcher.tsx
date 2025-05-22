@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Select from '@mui/material/Select';
@@ -19,14 +19,13 @@ const LanguageSwitcher: React.FC = () => {
   const currentLocale = params.locale as string;
   const [locale, setLocale] = useState(currentLocale);
 
-  // Update state if locale from params changes (e.g., on initial load or navigation)
   useEffect(() => {
     if (currentLocale && currentLocale !== locale) {
       setLocale(currentLocale);
     }
   }, [currentLocale, locale]);
 
-  const handleChange = (event: { target: { value: unknown } }) => {
+  const handleChange = useCallback((event: { target: { value: unknown } }) => { // Using useCallback
     const newLocale = event.target.value as string;
     setLocale(newLocale);
 
@@ -34,26 +33,24 @@ const LanguageSwitcher: React.FC = () => {
     
     router.push(newPath);
     router.refresh();
-  };
+  }, [currentLocale, pathname, router]);
 
-  // Colors for desktop (on blue primary background)
   const desktopTextColor = theme.palette.primary.contrastText;
   const desktopBackgroundColor = theme.palette.primary.main;
   const desktopBorderColor = theme.palette.primary.dark;
   const desktopFocusedBorderColor = theme.palette.primary.light;
 
-  // Colors for mobile (on default background, e.g., white in light theme)
-  const mobileTextColor = theme.palette.text.primary; // Standard text color
-  const mobileBackgroundColor = 'transparent'; // Or theme.palette.background.paper if you want a solid background
-  const mobileBorderColor = theme.palette.divider; // A subtle border
-  const mobileFocusedBorderColor = theme.palette.primary.main; // Standard focused color
+  const mobileTextColor = theme.palette.text.primary;
+  const mobileBackgroundColor = 'transparent';
+  const mobileBorderColor = theme.palette.divider;
+  const mobileFocusedBorderColor = theme.palette.primary.main;
 
   return (
     <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
       <InputLabel 
         id="language-switcher-label" 
         sx={{ 
-          color: { xs: mobileTextColor, md: desktopTextColor } // Responsive label color
+          color: { xs: mobileTextColor, md: desktopTextColor }
         }} 
       >
         {t('label')}
@@ -64,28 +61,26 @@ const LanguageSwitcher: React.FC = () => {
         onChange={handleChange}
         label={t('label')}
         sx={{
-          color: { xs: mobileTextColor, md: desktopTextColor }, // Responsive selected value text color
-          backgroundColor: { xs: mobileBackgroundColor, md: desktopBackgroundColor }, // Responsive background color
+          color: { xs: mobileTextColor, md: desktopTextColor },
+          backgroundColor: { xs: mobileBackgroundColor, md: desktopBackgroundColor },
           borderRadius: theme.shape.borderRadius,
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: { xs: mobileBorderColor, md: desktopBorderColor }, // Responsive border color
+            borderColor: { xs: mobileBorderColor, md: desktopBorderColor },
           },
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: { xs: mobileBorderColor, md: desktopBorderColor }, // Responsive hover border color
+            borderColor: { xs: mobileBorderColor, md: desktopBorderColor },
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: { xs: mobileFocusedBorderColor, md: desktopFocusedBorderColor }, // Responsive focused border color
+            borderColor: { xs: mobileFocusedBorderColor, md: desktopFocusedBorderColor },
           },
           '& .MuiSelect-icon': {
-            color: { xs: mobileTextColor, md: desktopTextColor }, // Responsive dropdown icon color
+            color: { xs: mobileTextColor, md: desktopTextColor },
           },
-          // Style the Paper component (dropdown menu) that holds the MenuItems
           '& .MuiPaper-root': {
-            backgroundColor: theme.palette.background.paper, // Dropdown background is always theme-appropriate
+            backgroundColor: theme.palette.background.paper,
           },
         }}
       >
-        {/* Menu items should always use defaultTextColor as they are on a default background */}
         <MenuItem value="en" sx={{ color: mobileTextColor }}>{t('en')}</MenuItem> 
         <MenuItem value="ja" sx={{ color: mobileTextColor }}>{t('ja')}</MenuItem>
       </Select>

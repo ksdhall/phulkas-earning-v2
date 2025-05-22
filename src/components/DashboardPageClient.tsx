@@ -26,8 +26,8 @@ import { format, addDays, subDays } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useTranslations } from 'next-intl';
 
-import { Bill } from '@/types/Bill';
-import { calculateDailyEarnings } from '@/lib/calculations';
+import { Bill } from '@/types/Bill'; // Ensure this type is correct and accessible
+import { calculateDailyEarnings } from '@/lib/calculations'; // Ensure this import path is correct
 
 const DashboardPageClient: React.FC = () => {
   const { data: session, status } = useSession();
@@ -65,6 +65,7 @@ const DashboardPageClient: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // This is where the summary is calculated from the fetched bills
   const dailySummary = useMemo(() => {
     return calculateDailyEarnings(billsForDate);
   }, [billsForDate]);
@@ -80,6 +81,7 @@ const DashboardPageClient: React.FC = () => {
     const formattedDateToFetch = format(dateToFetch, 'yyyy-MM-dd');
 
     try {
+      // Ensure the API endpoint is correct and returns the expected Bill structure
       const res = await fetch(`/${locale}/api/reports?from=${formattedDateToFetch}&to=${formattedDateToFetch}`);
       if (!res.ok) {
         const err = await res.json();
@@ -87,19 +89,24 @@ const DashboardPageClient: React.FC = () => {
       }
       const data = await res.json();
 
+      // IMPORTANT: Ensure data.bills is an array and its elements match the Bill type
       const processedBills: Bill[] = data.bills.map((bill: any) => ({
         ...bill,
+        // Ensure date is a string in 'yyyy-MM-dd' format
         date: format(new Date(bill.date), 'yyyy-MM-dd'),
+        // Ensure mealType is correctly typed as 'lunch' or 'dinner'
         mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
-        isOurFood: bill.isOurFood ?? true,
-        numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
+        // Provide defaults for optional fields if they might be null/undefined from API
+        isOurFood: bill.isOurFood ?? true, // Default to true if not provided
+        numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1, // Default to 1 if not provided
         comments: bill.comments ?? null,
       }));
       setBillsForDate(processedBills);
 
     } catch (err: any) {
+      console.error("Error fetching bills for date:", err); // Log the error for debugging
       setError(err.message || tGeneral('errors.failed_fetch'));
-      setBillsForDate([]);
+      setBillsForDate([]); // Ensure bills are cleared on error
     } finally {
       setLoading(false);
     }
@@ -128,12 +135,12 @@ const DashboardPageClient: React.FC = () => {
     setError(null);
   }, []);
 
-  const handleOpenAddModal = () => {
+  const handleOpenAddModal = useCallback(() => {
     setEditingBillId(undefined);
     setInitialBillData(undefined);
     setIsModalOpen(true);
     setIsModalLoading(false);
-  };
+  }, []);
 
   const handleOpenEditModal = useCallback(async (billId: string) => {
     setEditingBillId(billId);
@@ -158,6 +165,7 @@ const DashboardPageClient: React.FC = () => {
       };
       setInitialBillData(formattedData);
     } catch (err: any) {
+      console.error("Error fetching bill for edit:", err); // Log the error
       setError(err.message || tGeneral('errors.failed_fetch'));
       handleCloseModal();
     } finally {
@@ -190,23 +198,24 @@ const DashboardPageClient: React.FC = () => {
       fetchBillsForDate(currentDate);
 
     } catch (err: any) {
+      console.error("Error submitting bill form:", err); // Log the error
       setError(err.message || (currentBillId ? tBillForm('edit_error') : tBillForm('add_error')));
     } finally {
       setIsModalLoading(false);
     }
   }, [locale, tGeneral, tBillForm, handleCloseModal, fetchBillsForDate, currentDate]);
 
-  const handleOpenConfirmDelete = (id: number) => {
+  const handleOpenConfirmDelete = useCallback((id: number) => {
     setBillToDeleteId(id);
     setOpenConfirmDelete(true);
     setDeleteError(null);
-  };
+  }, []);
 
-  const handleCloseConfirmDelete = () => {
+  const handleCloseConfirmDelete = useCallback(() => {
     setOpenConfirmDelete(false);
     setBillToDeleteId(null);
     setDeleteError(null);
-  };
+  }, []);
 
   const handleDeleteBill = useCallback(async () => {
     if (billToDeleteId === null) return;
@@ -229,19 +238,20 @@ const DashboardPageClient: React.FC = () => {
       fetchBillsForDate(currentDate);
 
     } catch (err: any) {
+      console.error("Error deleting bill:", err); // Log the error
       setDeleteError(err.message || tGeneral('errors.failed_fetch'));
     } finally {
       setIsDeleting(false);
     }
   }, [billToDeleteId, locale, tGeneral, fetchBillsForDate, currentDate]);
 
-  const handlePreviousDay = () => {
+  const handlePreviousDay = useCallback(() => {
     setCurrentDate(prevDate => subDays(prevDate, 1));
-  };
+  }, []);
 
-  const handleNextDay = () => {
+  const handleNextDay = useCallback(() => {
     setCurrentDate(prevDate => addDays(prevDate, 1));
-  };
+  }, []);
 
   let content;
 
@@ -356,8 +366,7 @@ const DashboardPageClient: React.FC = () => {
           <DialogActions>
             <Button onClick={handleCloseConfirmDelete} disabled={isDeleting}>{tGeneral('edit.cancel')}</Button>
             <Button onClick={handleDeleteBill} color="error" autoFocus disabled={isDeleting}>
-              {isDeleting ? <CircularProgress size={24} /> : tGeneral('edit.delete')}
-            </Button>
+              {isDeleting ? <CircularProgress size={24} /> : tGeneral('edit.delete')}</Button>
           </DialogActions>
         </Dialog>
       </>
