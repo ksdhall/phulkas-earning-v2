@@ -59,15 +59,13 @@
     "daily_summary_for": "Daily Summary for {date}",
     "total_daily_earnings": "Total Daily Earnings: ¥{amount}",
     "is_our_food_label": "Our Food?",
-    "num_people_working_label": "Number of People (Dinner)",
+    "num_people_dinner_label": "Number of People (Dinner)",
     "no_entries_for_day": "No entries for this day.",
     "lunch_summary_title": "Lunch Summary",
     "dinner_summary_title": "Dinner Summary",
-    "raw_food_total": "Raw Food Total",
-    "raw_drink_total": "Raw Drink Total",
-    "phulkas_earnings": "Phulkas Earnings",
-    "no_lunch_entries": "No Lunch entries for this day.",
-    "no_dinner_entries": "No Dinner entries for this day."
+    "food_total": "Food Total",
+    "drink_total": "Drink Total",
+    "total_earnings_label": "Total Earnings"
   },
   "date_range_filter": {
     "from_date": "From Date",
@@ -127,7 +125,7 @@
     "meal_type": "Meal Type",
     "amount": "Amount",
     "is_our_food": "Our Food?",
-    "people_dinner": "People (Dinner)",
+    "num_people_dinner": "People (Dinner)",
     "comments": "Comments",
     "yes": "Yes",
     "no": "No"
@@ -142,17 +140,7 @@
     "actions": "Actions",
     "edit": "Edit",
     "delete": "Delete",
-    "column_time": "Time",
-    "time_dinner": "Dinner Time",
-    "time_lunch": "Lunch Time",
-    "people_working": "People Working",
-    "total_amount": "Total Amount",
-    "title": "Bill List",
-    "add_new_bill": "Add New Bill",
-    "confirm_delete_title": "Confirm Delete",
-    "confirm_delete_message": "Are you sure you want to delete this bill?",
-    "delete_confirm": "Delete",
-    "cancel": "Cancel"
+    "comments": "Comments"
   },
   "edit": {
     "delete_confirm_title": "Confirm Deletion",
@@ -162,7 +150,8 @@
     "deleting": "Deleting bill...",
     "delete_bill_error": "Failed to delete bill: {error}",
     "bill_not_found": "Bill not found.",
-    "title": "Edit Bill"
+    "title": "Edit Bill",
+    "delete_bill_confirm": "Are you sure you want to delete this bill?"
   },
   "errors": {
     "failed_fetch": "Failed to fetch data. Please try again.",
@@ -171,7 +160,8 @@
     "invalid_date": "Invalid date format",
     "positive_number": "Must be a positive number",
     "invalid_date_range": "Invalid date range selected.",
-    "date_range_order": "From date cannot be after To date."
+    "date_range_order": "From date cannot be after To date.",
+    "bill_not_found_for_date": "No bills found for this date."
   },
   "bill_form": {
     "add_title": "Add New Bill",
@@ -199,7 +189,6 @@
     "amount": "Amount",
     "is_our_food": "Is Our Food?",
     "number_of_people_working_dinner": "Number of People (Dinner)",
-    "comments": "Comments (Optional)",
     "save": "Save",
     "cancel": "Cancel",
     "comments_label": "Comments"

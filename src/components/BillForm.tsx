@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   TextField,
   Button,
@@ -31,9 +31,10 @@ interface BillFormProps {
   onSubmit: (data: Omit<Bill, 'id'>, currentBillId?: string) => void;
   isSubmitting?: boolean;
   defaultDate?: Date;
+  onCancel: () => void; // Passed from parent to close modal
 }
 
-const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSubmitting, defaultDate }) => {
+const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSubmitting, defaultDate, onCancel }) => {
   const t = useTranslations('bill_form');
   const tMealType = useTranslations('meal_type');
   const tErrors = useTranslations('errors');
@@ -51,10 +52,11 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
   const [isOurFood, setIsOurFood] = useState<boolean>(initialBill?.isOurFood ?? true);
   const [numberOfPeopleWorkingDinner, setNumberOfPeopleWorkingDinner] = useState<number | ''>(initialBill?.numberOfPeopleWorkingDinner ?? 1);
   const [comments, setComments] = useState<string>(initialBill?.comments ?? '');
+
   const [error, setError] = useState<{ [key: string]: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
 
-  const dateFnsLocale = React.useMemo(() => {
+  const dateFnsLocale = useMemo(() => {
     return locale === 'ja' ? ja : enUS;
   }, [locale]);
 
@@ -65,116 +67,91 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
       setDrinkAmount(initialBill.drinkAmount);
       setMealType(initialBill.mealType);
       setIsOurFood(initialBill.isOurFood);
-      setNumberOfPeopleWorkingDinner(initialBill.numberOfPeopleWorkingDinner);
-      setComments(initialBill.comments || ''); 
-      setFormError(null);
-    } else {
-      setDate(defaultDate || new Date());
+      setNumberOfPeopleWorkingDinner(initialBill.numberOfPeopleWorkingDinner ?? 1);
+      setComments(initialBill.comments ?? '');
+    } else if (defaultDate) {
+      setDate(defaultDate);
       setFoodAmount(0);
       setDrinkAmount(0);
       setMealType('lunch');
       setIsOurFood(true);
       setNumberOfPeopleWorkingDinner(1);
       setComments('');
-      setFormError(null);
     }
+    setFormError(null);
+    setError({});
   }, [initialBill, defaultDate]);
 
-  const handleFoodAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '') {
-      setFoodAmount('');
-    } else {
-      const numValue = Number(value);
-      if (!isNaN(numValue)) {
-        setFoodAmount(numValue);
-      }
+  const validateForm = useCallback(() => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!date || !isValid(date)) {
+      newErrors.date = tErrors('invalid_date');
     }
-  };
 
-  const handleDrinkAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '') {
-      setDrinkAmount('');
-    } else {
-      const numValue = Number(value);
-      if (!isNaN(numValue)) {
-        setDrinkAmount(numValue);
-      }
+    if (foodAmount === '' || foodAmount < 0) {
+      newErrors.foodAmount = tErrors('positive_number');
     }
-  };
 
-  const handleNumberOfPeopleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '') {
-      setNumberOfPeopleWorkingDinner('');
-    } else {
-      const numValue = Number(value);
-      if (!isNaN(numValue)) {
-        setNumberOfPeopleWorkingDinner(numValue);
-      }
+    if (drinkAmount === '' || drinkAmount < 0) {
+      newErrors.drinkAmount = tErrors('positive_number');
     }
-  };
 
-  const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setFormError(null);
+    if (mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)) {
+      newErrors.numberOfPeopleWorkingDinner = t('num_people_min');
+    }
 
-    const finalFoodAmount = foodAmount === '' ? 0 : foodAmount;
-    const finalDrinkAmount = drinkAmount === '' ? 0 : drinkAmount;
-    const finalNumPeople = numberOfPeopleWorkingDinner === '' ? 1 : numberOfPeopleWorkingDinner;
+    setError(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [date, foodAmount, drinkAmount, mealType, numberOfPeopleWorkingDinner, tErrors, t]);
 
-    if (mealType === 'dinner' && finalNumPeople < 1) {
-      setFormError(t('num_people_min'));
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      setFormError(tGeneral('errors.form_validation_failed') || 'Please correct the errors in the form.');
       return;
     }
+    setFormError(null);
 
-    const dateAsString = date ? format(date, 'yyyy-MM-dd') : '';
+    const formattedDate = date ? format(date, 'yyyy-MM-dd') : '';
 
-    const formDataToSend: Omit<Bill, 'id'> = {
-      date: dateAsString,
+    const formData: Omit<Bill, 'id'> = {
+      date: formattedDate,
+      foodAmount: Number(foodAmount),
+      drinkAmount: Number(drinkAmount),
       mealType,
-      foodAmount: finalFoodAmount,
-      drinkAmount: finalDrinkAmount,
       isOurFood,
-      numberOfPeopleWorkingDinner: finalNumPeople,
-      comments: comments,
+      numberOfPeopleWorkingDinner: mealType === 'dinner' ? Number(numberOfPeopleWorkingDinner) : 1,
+      comments: comments.trim() || null,
     };
 
-    await onSubmit(formDataToSend, billId);
-  }, [date, foodAmount, drinkAmount, mealType, isOurFood, numberOfPeopleWorkingDinner, comments, onSubmit, billId, t]);
+    onSubmit(formData, billId);
+  }, [date, foodAmount, drinkAmount, mealType, isOurFood, numberOfPeopleWorkingDinner, comments, onSubmit, billId, validateForm, tGeneral]);
 
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit}
-      sx={{
-        marginTop: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        maxWidth: 500,
-        margin: '0 auto',
-        padding: 0,
-        border: 'none',
-        boxShadow: 'none',
-      }}
-    >
-      {formError && <Alert severity="error">{formError}</Alert>}
+    <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+      {formError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {formError}
+        </Alert>
+      )}
 
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateFnsLocale}>
         <DatePicker
           label={t('date_label')}
           value={date}
-          onChange={(newValue) => setDate(newValue)}
-          slotProps={{ textField: { fullWidth: true, required: true, InputLabelProps: { shrink: true } } }}
+          onChange={(newDate) => setDate(newDate)}
+          slotProps={{ textField: { fullWidth: true, margin: "normal", error: !!error.date, helperText: error.date } }}
+          format="yyyy-MM-dd"
         />
       </LocalizationProvider>
 
-      <FormControl fullWidth required>
+      <FormControl fullWidth margin="normal" error={!!error.mealType}>
         <InputLabel id="meal-type-label">{t('meal_type_label')}</InputLabel>
         <Select
           labelId="meal-type-label"
+          id="meal-type"
           value={mealType}
           label={t('meal_type_label')}
           onChange={(e) => setMealType(e.target.value as Bill['mealType'])}
@@ -182,69 +159,82 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
           <MenuItem value="lunch">{tMealType('lunch')}</MenuItem>
           <MenuItem value="dinner">{tMealType('dinner')}</MenuItem>
         </Select>
+        {error.mealType && <FormHelperText>{error.mealType}</FormHelperText>}
       </FormControl>
 
       <TextField
         label={t('food_amount_label')}
-        type="number"
         value={foodAmount}
-        onChange={handleFoodAmountChange}
+        onChange={(e) => setFoodAmount(e.target.value === '' ? '' : Number(e.target.value))}
         fullWidth
+        margin="normal"
+        type="number"
         inputProps={{ min: 0 }}
+        error={!!error.foodAmount}
+        helperText={error.foodAmount}
       />
 
       <TextField
         label={t('drink_amount_label')}
-        type="number"
         value={drinkAmount}
-        onChange={handleDrinkAmountChange}
+        onChange={(e) => setDrinkAmount(e.target.value === '' ? '' : Number(e.target.value))}
         fullWidth
+        margin="normal"
+        type="number"
         inputProps={{ min: 0 }}
+        error={!!error.drinkAmount}
+        helperText={error.drinkAmount}
       />
 
       {mealType === 'dinner' && (
         <>
           <FormControlLabel
-            control={
-              <Checkbox
-                checked={isOurFood}
-                onChange={(e) => setIsOurFood(e.target.checked)}
-                name="isOurFood"
-                color="primary"
-              />
-            }
+            control={<Checkbox checked={isOurFood} onChange={(e) => setIsOurFood(e.target.checked)} />}
             label={t('is_our_food_label')}
           />
           <TextField
             label={t('num_people_working_label')}
-            type="number"
             value={numberOfPeopleWorkingDinner}
-            onChange={handleNumberOfPeopleChange}
+            onChange={(e) => setNumberOfPeopleWorkingDinner(e.target.value === '' ? '' : Number(e.target.value))}
             fullWidth
+            margin="normal"
+            type="number"
             inputProps={{ min: 1 }}
-            error={mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)}
-            helperText={
-              mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)
-                ? t('num_people_min')
-                : ''
-            }
+            error={!!error.numberOfPeopleWorkingDinner}
+            helperText={error.numberOfPeopleWorkingDinner}
           />
         </>
       )}
 
       <TextField
-        label={t('comments_label')} // Use the correct translation key
-        multiline
-        rows={3}
+        label={t('comments_label')}
         value={comments}
         onChange={(e) => setComments(e.target.value)}
         fullWidth
-        InputLabelProps={{ shrink: true }} // CRITICAL FIX: Ensure label shrinks for multiline
+        multiline
+        rows={4}
+        margin="normal"
+        sx={{
+          '& .MuiInputLabel-root': {
+            transform: 'translate(14px, 14px) scale(1)',
+          },
+          '& .MuiInputLabel-shrink': {
+            transform: 'translate(14px, -9px) scale(0.75)',
+          },
+          '& .MuiOutlinedInput-root': {
+            paddingTop: '18px',
+          },
+        }}
       />
 
-      <Button type="submit" variant="contained" color="primary" disabled={isSubmitting} sx={{ mt: 2 }}>
-        {isSubmitting ? <CircularProgress size={24} color="inherit" /> : (billId ? t('save_button') : tGeneral('add'))}
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+        <Button onClick={onCancel} sx={{ mr: 2 }} disabled={isSubmitting}>
+          {t('cancel')}
+        </Button>
+        <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
+          {isSubmitting ? <CircularProgress size={24} /> : t('save_button')}
+        </Button>
+      </Box>
     </Box>
   );
 };

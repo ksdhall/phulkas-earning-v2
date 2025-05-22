@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react'; // CRITICAL FIX: Ensure useMemo is imported
+import React, { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -38,13 +38,13 @@ const MealSummaryDisplay: React.FC<{
       {title}
     </Typography>
     <Typography variant="body2">
-      {tGeneral('summary.raw_food_total')}: ¥{summary.rawFoodTotal.toLocaleString(locale)}
+      {tGeneral('summary.food_total')}: ¥{summary.rawFoodTotal.toLocaleString(locale)} {/* Changed from raw_food_total */}
     </Typography>
     <Typography variant="body2">
-      {tGeneral('summary.raw_drink_total')}: ¥{summary.rawDrinkTotal.toLocaleString(locale)}
+      {tGeneral('summary.drink_total')}: ¥{summary.rawDrinkTotal.toLocaleString(locale)} {/* Changed from raw_drink_total */}
     </Typography>
     <Typography variant="body1" color="primary" sx={{ fontWeight: 'bold', mt: 1 }}>
-      {tGeneral('summary.phulkas_earnings')}: ¥{summary.phulkasEarnings.toLocaleString(locale)}
+      {tGeneral('summary.total_earnings_label')}: ¥{summary.phulkasEarnings.toLocaleString(locale)} {/* Changed from phulkas_earnings */}
     </Typography>
     {summary.isOurFood !== undefined && (
       <Typography variant="body2">

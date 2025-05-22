@@ -30,7 +30,7 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon, CheckCircle, Close } from '@mui/icons-material';
 import { useTranslations } from 'next-intl';
 import { Bill } from '@/types/Bill';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface BillListProps {
   bills: Bill[];
@@ -74,7 +74,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
 
   if (!bills || bills.length === 0) {
     return (
-      <Paper elevation={2} sx={{ p: 2, mb: 2, textAlign: 'center' }}>
+      <Paper elevation={2} sx={{ p: 2, mb: 2, textAlign: 'center', borderRadius: 2 }}>
         <Typography variant="body1">{tErrors('bill_not_found')}</Typography>
       </Paper>
     );
@@ -90,7 +90,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="body2" color="text.secondary">{t('date')}:</Typography>
                   <Typography component="span" variant="body1" color="text.primary" sx={{ fontWeight: 'medium' }}>
-                    {format(new Date(bill.date), 'yyyy-MM-dd')}
+                    {format(parseISO(bill.date), 'yyyy-MM-dd')}
                   </Typography>
                 </Box>
               )}
@@ -133,12 +133,19 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                   </Typography>
                 </Box>
               )}
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">{t('comments')}:</Typography>
+                <Typography component="span" variant="body1" color="text.primary" sx={{ fontWeight: 'medium', textAlign: 'right', flexGrow: 1, ml: 1 }}>
+                  {bill.comments || '-'}
+                </Typography>
+              </Box>
               
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 2, borderTop: '1px solid', borderColor: 'divider', mt: 1 }}>
                 <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}>
                   <EditIcon />
                 </IconButton>
-                <IconButton onClick={() => handleDeleteClick(bill.id)} color="error" aria-label={t('delete')}>
+                <IconButton onClick={() => handleDeleteClick(parseInt(bill.id))} color="error" aria-label={t('delete')}>
                   <DeleteIcon />
                 </IconButton>
               </Box>
@@ -146,7 +153,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
           ))}
         </List>
       ) : (
-        <TableContainer component={Paper} elevation={3}>
+        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 3 }}>
           <Table sx={{ minWidth: 650 }} aria-label="bill list">
             <TableHead>
               <TableRow>
@@ -156,6 +163,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                 <TableCell align="right">{t('drink_amount')}</TableCell>
                 <TableCell align="center">{t('is_our_food')}</TableCell>
                 <TableCell align="right">{t('num_people_working')}</TableCell>
+                <TableCell>{t('comments')}</TableCell>
                 <TableCell align="center">{t('actions')}</TableCell>
               </TableRow>
             </TableHead>
@@ -164,7 +172,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                 <TableRow key={bill.id}>
                   {showDateColumn && (
                     <TableCell component="th" scope="row">
-                      {format(new Date(bill.date), 'yyyy-MM-dd')}
+                      {format(parseISO(bill.date), 'yyyy-MM-dd')}
                     </TableCell>
                   )}
                   <TableCell>{tMealType(bill.mealType)}</TableCell>
@@ -180,11 +188,14 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                   <TableCell align="right">
                     {bill.mealType === 'dinner' ? (bill.numberOfPeopleWorkingDinner || '-') : '-'}
                   </TableCell>
+                  <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {bill.comments || '-'}
+                  </TableCell>
                   <TableCell align="center">
                     <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}>
                       <EditIcon />
                     </IconButton>
-                    <IconButton onClick={() => handleDeleteClick(bill.id)} color="error" aria-label={t('delete')}>
+                    <IconButton onClick={() => handleDeleteClick(parseInt(bill.id))} color="error" aria-label={t('delete')}>
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>

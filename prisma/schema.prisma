@@ -21,18 +21,10 @@ model Bill {
   date        DateTime
   foodAmount  Float
   drinkAmount Float
-  // Changed from Boolean to Enum
-  // FIX: Add a default value for existing rows
-  mealType    MealType @default(LUNCH) // Use the MealType Enum and default to LUNCH
-
-  // Added for dinner food calculation
-  // True if the food sold was 'ours' during dinner. Optional, defaults to true if not specified.
+  mealType    MealType @default(LUNCH)
   isOurFood   Boolean?  @default(true)
-
-  // Added for dinner food calculation shift share. Optional, defaults to 1 if not specified.
-  // Only relevant when mealType is DINNER.
   numberOfPeopleWorkingDinner Int? @default(1)
-
+  comments    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

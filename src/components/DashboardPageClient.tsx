@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, usePathname } from 'next/navigation';
-import React, { useEffect, useState, useMemo, useCallback } from 'react'; // CRITICAL FIX: Ensure useMemo is imported
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import BillForm from '@/components/BillForm';
 import DailySummaryCard from '@/components/DailySummaryCard';
 import BillList from '@/components/BillList';
@@ -24,7 +24,6 @@ import { useTheme, useMediaQuery } from '@mui/material';
 
 import { format, addDays, subDays } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
-
 import { useTranslations } from 'next-intl';
 
 import { Bill } from '@/types/Bill';
@@ -90,10 +89,11 @@ const DashboardPageClient: React.FC = () => {
 
       const processedBills: Bill[] = data.bills.map((bill: any) => ({
         ...bill,
-        date: format(new Date(bill.date), 'yyyy-MM-MM-dd'),
+        date: format(new Date(bill.date), 'yyyy-MM-dd'),
         mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
         isOurFood: bill.isOurFood ?? true,
         numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
+        comments: bill.comments ?? null,
       }));
       setBillsForDate(processedBills);
 
@@ -150,10 +150,11 @@ const DashboardPageClient: React.FC = () => {
       const data: Bill = await response.json();
       const formattedData = {
         ...data,
-        date: format(new Date(data.date), 'yyyy-MM-MM-dd'),
+        date: format(new Date(data.date), 'yyyy-MM-dd'),
         mealType: data.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
         isOurFood: data.isOurFood ?? true,
         numberOfPeopleWorkingDinner: data.numberOfPeopleWorkingDinner ?? 1,
+        comments: data.comments ?? null,
       };
       setInitialBillData(formattedData);
     } catch (err: any) {
@@ -335,6 +336,7 @@ const DashboardPageClient: React.FC = () => {
               onSubmit={handleBillFormSubmit}
               isSubmitting={isModalLoading}
               defaultDate={currentDate}
+              onCancel={handleCloseModal}
             />
           </DialogContent>
         </Dialog>

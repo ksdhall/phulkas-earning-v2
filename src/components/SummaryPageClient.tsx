@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'; // CRITICAL FIX: Ensure useMemo is imported
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Container,
@@ -91,7 +91,6 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   const [toDate, setToDate] = useState<Date | null>(
     initialToDate ? parseISO(initialToDate) : null
   );
-  const [mealTypeFilter, setMealTypeFilter] = useState<'all' | 'lunch' | 'dinner'>('all');
   
   const [selectedDailySummaryEntry, setSelectedDailySummaryEntry] = useState<{ date: string; summary: DailySummary } | null>(null);
 
@@ -176,13 +175,6 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
     }
   }, [dailySummariesForRange]);
 
-  const filteredBills = useMemo(() => {
-    return bills.filter(bill => {
-      if (mealTypeFilter === 'all') return true;
-      return bill.mealType === mealTypeFilter;
-    });
-  }, [bills, mealTypeFilter]);
-
   const dailyEarningsData = useMemo(() => {
     const chartData = dailySummariesForRange
       .map(entry => {
@@ -206,7 +198,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
       lunch: 0,
       dinner: 0,
     };
-    filteredBills.forEach(bill => {
+    bills.forEach(bill => {
       mealTypeMap[bill.mealType] += (bill.foodAmount + bill.drinkAmount);
     });
 
@@ -218,7 +210,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
       data.push({ name: tMealType('dinner'), value: mealTypeMap.dinner });
     }
     return data;
-  }, [filteredBills, tMealType]);
+  }, [bills, tMealType]);
 
   const totalEarnings = useMemo(() => {
     return dailySummariesForRange.reduce((sum, entry) => sum + entry.summary.dayTotalEarnings, 0);
@@ -257,21 +249,6 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
               slotProps={{ textField: { fullWidth: true, variant: 'outlined', size: 'small', sx: { borderRadius: 2 } } }}
             />
           </LocalizationProvider>
-        </Grid>
-        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
-          <FormControl fullWidth variant="outlined" size="small" sx={{ borderRadius: 2 }}>
-            <InputLabel>{t('meal_type_filter')}</InputLabel>
-            <Select
-              value={mealTypeFilter}
-              label={t('meal_type_filter')}
-              onChange={(e) => setMealTypeFilter(e.target.value as 'all' | 'lunch' | 'dinner')}
-              sx={{ borderRadius: 2 }}
-            >
-              <MenuItem value="all">{tGeneral('all')}</MenuItem>
-              <MenuItem value="lunch">{tMealType('lunch')}</MenuItem>
-              <MenuItem value="dinner">{tMealType('dinner')}</MenuItem>
-            </Select>
-          </FormControl>
         </Grid>
         <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
           <Button
@@ -328,8 +305,9 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
+                    {/* CRITICAL FIX: Smaller font for X-axis */}
+                    <XAxis dataKey="date" style={{ fontSize: '0.75rem' }} />
+                    <YAxis tickFormatter={(value) => `¥${value.toLocaleString(locale)}`} style={{ fontSize: '0.75rem' }} />
                     <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
                     <Legend />
                     <Bar
@@ -378,6 +356,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
                       fill="#8884d8"
                       dataKey="value"
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      activeShape={false}
                     >
                       {mealTypeDistributionData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
