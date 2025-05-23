@@ -1,0 +1,13 @@
+// tsconfig.ts-node.json
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2017",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": ["node"] // Add types for Node.js
+  },
+  "include": ["prisma/seed.ts"] // Only include the seed file
+}
