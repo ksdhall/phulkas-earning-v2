@@ -35,8 +35,8 @@ const LanguageSwitcher: React.FC = () => {
     router.refresh();
   }, [currentLocale, pathname, router]);
 
-  const desktopTextColor = theme.palette.primary.contrastText;
-  const desktopBackgroundColor = theme.palette.primary.main;
+  const desktopTextColor = theme.palette.text.primary;
+  const desktopBackgroundColor = 'transparent';
   const desktopBorderColor = theme.palette.primary.dark;
   const desktopFocusedBorderColor = theme.palette.primary.light;
 

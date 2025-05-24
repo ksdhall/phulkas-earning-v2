@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth';
 import prisma from '@/lib/prisma';
 import { MealType } from '@prisma/client';
+import { format } from 'date-fns';
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -34,7 +35,15 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(newBill, { status: 201 });
+    return NextResponse.json({
+      ...newBill,
+      id: newBill.id.toString(), // Ensure ID is string
+      date: format(newBill.date, 'yyyy-MM-dd'), // Ensure date is formatted
+      mealType: newBill.mealType.toString().toLowerCase(), // Ensure mealType is lowercase
+      isOurFood: newBill.isOurFood ?? true,
+      numberOfPeopleWorkingDinner: newBill.numberOfPeopleWorkingDinner ?? 1,
+      comments: newBill.comments ?? null,
+    }, { status: 201 });
   } catch (error) {
     console.error('API Error creating bill:', error);
     return NextResponse.json({ error: 'Failed to create bill' }, { status: 500 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useCallback
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   TextField,
   Button,
@@ -37,8 +37,8 @@ interface BillFormProps {
 const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSubmitting, defaultDate, onCancel }) => {
   const t = useTranslations('bill_form');
   const tMealType = useTranslations('meal_type');
-  const tErrors = useTranslations('errors');
-  const tGeneral = useTranslations('general');
+  const tErrors = useTranslations('errors'); // Use this for error messages
+  const tGeneral = useTranslations('general'); // Use this for general messages like 'cancel'
 
   const router = useRouter();
   const locale = router.locale as string;
@@ -82,7 +82,7 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
     setError({});
   }, [initialBill, defaultDate]);
 
-  const validateForm = useCallback(() => { // Using useCallback
+  const validateForm = useCallback(() => {
     const newErrors: { [key: string]: string } = {};
 
     if (!date || !isValid(date)) {
@@ -98,18 +98,18 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
     }
 
     if (mealType === 'dinner' && (numberOfPeopleWorkingDinner === '' || numberOfPeopleWorkingDinner < 1)) {
-      newErrors.numberOfPeopleWorkingDinner = t('num_people_min');
+      newErrors.numberOfPeopleWorkingDinner = t('num_people_min'); // This is a bill_form specific error
     }
 
     setError(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [date, foodAmount, drinkAmount, mealType, numberOfPeopleWorkingDinner, tErrors, t]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => { // Using useCallback
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      setFormError(tGeneral('errors.form_validation_failed') || 'Please correct the errors in the form.');
+      setFormError(tErrors('form_validation_failed')); // CRITICAL FIX: Use tErrors here
       return;
     }
     setFormError(null);
@@ -123,11 +123,11 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
       mealType,
       isOurFood,
       numberOfPeopleWorkingDinner: mealType === 'dinner' ? Number(numberOfPeopleWorkingDinner) : 1,
-      comments: comments.trim() || null,
+      comments: comments,
     };
 
     onSubmit(formData, billId);
-  }, [date, foodAmount, drinkAmount, mealType, isOurFood, numberOfPeopleWorkingDinner, comments, onSubmit, billId, validateForm, tGeneral]);
+  }, [date, foodAmount, drinkAmount, mealType, isOurFood, numberOfPeopleWorkingDinner, comments, onSubmit, billId, validateForm, tErrors]); // Added tErrors to dependency array
 
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
@@ -229,7 +229,7 @@ const BillForm: React.FC<BillFormProps> = ({ billId, initialBill, onSubmit, isSu
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
         <Button onClick={onCancel} sx={{ mr: 2 }} disabled={isSubmitting}>
-          {t('cancel')}
+          {t('cancel_button')} {/* CRITICAL FIX: Use bill_form.cancel_button */}
         </Button>
         <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
           {isSubmitting ? <CircularProgress size={24} /> : t('save_button')}

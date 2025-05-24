@@ -1,11 +1,11 @@
-// src/types/Bill.ts
+//src/types/Bill.ts
 export interface Bill {
-  id: string;
-  date: string; // ISO string 'yyyy-MM-dd'
+  id: string; 
+  date: string; 
   foodAmount: number;
   drinkAmount: number;
   mealType: 'lunch' | 'dinner';
-  isOurFood: boolean;
+  isOurFood: boolean; 
   numberOfPeopleWorkingDinner: number;
   comments: string | "";
 }

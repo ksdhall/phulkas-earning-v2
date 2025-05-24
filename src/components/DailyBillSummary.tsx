@@ -38,23 +38,24 @@ const MealSummaryDisplay: React.FC<{
       {title}
     </Typography>
     <Typography variant="body2">
-      {tGeneral('summary.food_total')}: ¥{summary.rawFoodTotal.toLocaleString(locale)} {/* Changed from raw_food_total */}
+      {tGeneral('summary.food_total')}: ¥{summary.rawFoodTotal.toLocaleString(locale)}
     </Typography>
     <Typography variant="body2">
-      {tGeneral('summary.drink_total')}: ¥{summary.rawDrinkTotal.toLocaleString(locale)} {/* Changed from raw_drink_total */}
+      {tGeneral('summary.drink_total')}: ¥{summary.rawDrinkTotal.toLocaleString(locale)}
     </Typography>
     <Typography variant="body1" color="primary" sx={{ fontWeight: 'bold', mt: 1 }}>
-      {tGeneral('summary.total_earnings_label')}: ¥{summary.phulkasEarnings.toLocaleString(locale)} {/* Changed from phulkas_earnings */}
+      {tGeneral('summary.total_earnings_label')}: ¥{summary.phulkasEarnings.toLocaleString(locale)}
     </Typography>
-    {summary.isOurFood !== undefined && (
-      <Typography variant="body2">
-        {tGeneral('summary.is_our_food_label')}: {summary.isOurFood ? tGeneral('general.yes') : tGeneral('general.no')}
-      </Typography>
-    )}
-    {summary.numberOfPeopleWorkingDinner !== undefined && (
-      <Typography variant="body2">
-        {tGeneral('summary.num_people_working_label')}: {summary.numberOfPeopleWorkingDinner}
-      </Typography>
+    {/* These properties are now guaranteed to be present on MealSummary from calculations.ts */}
+    {title.includes(tGeneral('summary.dinner_summary_title')) && ( // Only show for dinner
+      <>
+        <Typography variant="body2">
+          {tGeneral('summary.is_our_food_label')}: {summary.isOurFood ? tGeneral('general.yes') : tGeneral('general.no')}
+        </Typography>
+        <Typography variant="body2">
+          {tGeneral('summary.num_people_working_label')}: {summary.numberOfPeopleWorkingDinner.toLocaleString(locale)}
+        </Typography>
+      </>
     )}
   </Box>
 );

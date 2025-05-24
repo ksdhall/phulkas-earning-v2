@@ -1,11 +1,17 @@
-/*
-  Warnings:
+-- CreateTable
+CREATE TABLE "Bill" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "date" DATETIME NOT NULL,
+    "foodAmount" REAL NOT NULL,
+    "drinkAmount" REAL NOT NULL,
+    "mealType" TEXT NOT NULL DEFAULT 'LUNCH',
+    "isOurFood" BOOLEAN DEFAULT true,
+    "numberOfPeopleWorkingDinner" INTEGER DEFAULT 1,
+    "comments" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
 
-  - You are about to drop the column `isLunch` on the `Bill` table. All the data in the column will be lost.
-  - You are about to alter the column `drinkAmount` on the `Bill` table. The data in that column could be lost. The data in that column will be cast from `Int` to `Float`.
-  - You are about to alter the column `foodAmount` on the `Bill` table. The data in that column could be lost. The data in that column will be cast from `Int` to `Float`.
-
-*/
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -47,26 +53,27 @@ CREATE TABLE "VerificationToken" (
     "expires" DATETIME NOT NULL
 );
 
--- RedefineTables
-PRAGMA defer_foreign_keys=ON;
-PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_Bill" (
+-- CreateTable
+CREATE TABLE "AppConfiguration" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "date" DATETIME NOT NULL,
-    "foodAmount" REAL NOT NULL,
-    "drinkAmount" REAL NOT NULL,
-    "mealType" TEXT NOT NULL DEFAULT 'LUNCH',
-    "isOurFood" BOOLEAN DEFAULT true,
-    "numberOfPeopleWorkingDinner" INTEGER DEFAULT 1,
+    "key" TEXT NOT NULL,
+    "value" REAL NOT NULL,
+    "description" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
-INSERT INTO "new_Bill" ("createdAt", "date", "drinkAmount", "foodAmount", "id", "updatedAt") SELECT "createdAt", "date", "drinkAmount", "foodAmount", "id", "updatedAt" FROM "Bill";
-DROP TABLE "Bill";
-ALTER TABLE "new_Bill" RENAME TO "Bill";
+
+-- CreateTable
+CREATE TABLE "PurchaseBill" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "date" DATETIME NOT NULL,
+    "amount" REAL NOT NULL,
+    "description" TEXT NOT NULL,
+    "comments" TEXT
+);
+
+-- CreateIndex
 CREATE INDEX "Bill_date_idx" ON "Bill"("date");
-PRAGMA foreign_keys=ON;
-PRAGMA defer_foreign_keys=OFF;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
@@ -82,3 +89,6 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AppConfiguration_key_key" ON "AppConfiguration"("key");

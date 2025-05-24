@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; // Added useRef
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Container,
@@ -10,10 +10,6 @@ import {
   Alert,
   Grid,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Card,
   CardContent,
   useTheme,
@@ -22,7 +18,7 @@ import {
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { format, parseISO, isValid, addDays } from 'date-fns';
+import { format, parseISO, isValid, subDays } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 
 import { useRouter, usePathname } from 'next/navigation';
@@ -39,20 +35,10 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import DailyBillSummary from './DailyBillSummary'; // Correctly importing DailyBillSummary
-import { calculateDailySummariesForRange, DailySummary } from '@/lib/calculations';
-
-// Define the Bill type to match what's passed from summary/page.tsx and calculations.ts expects
-interface Bill {
-  id: string;
-  date: string; // ISO string 'yyyy-MM-dd'
-  foodAmount: number; // Now explicitly foodAmount
-  drinkAmount: number; // Now explicitly drinkAmount
-  mealType: 'lunch' | 'dinner';
-  isOurFood: boolean;
-  numberOfPeopleWorkingDinner: number;
-  comments?: string | null;
-}
+import DailyBillSummary from './DailyBillSummary';
+import { calculateDailySummariesForRange, DailySummary, calculateRangeSummary } from '@/lib/calculations'; // Import calculateRangeSummary
+import { Bill } from '@/types/bill';
+import { useAppConfig } from '@/context/AppConfigContext'; // Import useAppConfig
 
 interface SummaryPageClientProps {
   locale: string;
@@ -62,7 +48,6 @@ interface SummaryPageClientProps {
   initialError?: string | null;
 }
 
-// Define colors for the pie chart
 const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
 
 const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
@@ -75,6 +60,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   const t = useTranslations('summary');
   const tGeneral = useTranslations('general');
   const tMealType = useTranslations('meal_type');
+  const appConfig = useAppConfig(); // CRITICAL: Get app config from context
 
   const router = useRouter();
   const pathname = usePathname();
@@ -86,15 +72,14 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   const [error, setError] = useState<string | null>(initialError);
 
   const [fromDate, setFromDate] = useState<Date | null>(
-    initialFromDate ? parseISO(initialFromDate) : null
+    initialFromDate ? parseISO(initialFromDate) : subDays(new Date(), 6)
   );
   const [toDate, setToDate] = useState<Date | null>(
-    initialToDate ? parseISO(initialToDate) : null
+    initialToDate ? parseISO(initialToDate) : new Date()
   );
   
   const [selectedDailySummaryEntry, setSelectedDailySummaryEntry] = useState<{ date: string; summary: DailySummary } | null>(null);
 
-  // Ref for the DailyBillSummary section
   const dailyBillSummaryRef = useRef<HTMLDivElement>(null);
 
   const dateFnsLocale = useMemo(() => {
@@ -102,77 +87,56 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
   }, [locale]);
 
   const dailySummariesForRange = useMemo(() => {
-    const calculatedSummaries = calculateDailySummariesForRange(bills);
-    return calculatedSummaries;
-  }, [bills]);
+    return calculateDailySummariesForRange(bills, appConfig); // CRITICAL: Pass appConfig
+  }, [bills, appConfig]);
+
+  const totalEarningsForRange = useMemo(() => {
+    const summary = calculateRangeSummary(bills, appConfig); // CRITICAL: Pass appConfig
+    return summary.dayTotalEarnings;
+  }, [bills, appConfig]);
 
   useEffect(() => {
     setBills(initialBills);
     setError(initialError);
-    setFromDate(initialFromDate && isValid(parseISO(initialFromDate)) ? parseISO(initialFromDate) : null);
-    setToDate(initialToDate && isValid(parseISO(initialToDate)) ? parseISO(initialToDate) : null);
+    if (initialFromDate && isValid(parseISO(initialFromDate))) {
+      setFromDate(parseISO(initialFromDate));
+    } else {
+      setFromDate(subDays(new Date(), 6));
+    }
+    if (initialToDate && isValid(parseISO(initialToDate))) {
+      setToDate(parseISO(initialToDate));
+    } else {
+      setToDate(new Date());
+    }
     setSelectedDailySummaryEntry(null); 
   }, [initialBills, initialError, initialFromDate, initialToDate]);
 
-  const fetchBills = useCallback(async () => {
-    setLoading(true);
+
+  const handleApplyFilter = useCallback(() => {
     setError(null);
 
-    let fromDateStr = fromDate && isValid(fromDate) ? format(fromDate, 'yyyy-MM-dd') : '';
-    let toDateStr = toDate && isValid(toDate) ? format(toDate, 'yyyy-MM-dd') : '';
-
     if (!fromDate || !isValid(fromDate) || !toDate || !isValid(toDate)) {
-      setError(t('errors.invalid_date_range') || 'Invalid date range selected.');
-      setLoading(false);
+      setError(tGeneral('date_range_filter.dates_not_selected') || 'Please select both From and To dates.');
       return;
     }
     if (fromDate > toDate) {
-      setError(t('errors.date_range_order') || 'From date cannot be after To date.');
-      setLoading(false);
+      setError(tGeneral('date_range_filter.from_date_after_to_date') || 'From date cannot be after To date.');
       return;
     }
 
-    const queryParams = new URLSearchParams();
-    queryParams.append('from', fromDateStr);
-    queryParams.append('to', toDateStr);
-
-    const apiUrl = `/api/reports?${queryParams.toString()}`;
-
-    try {
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch bills');
-      }
-      const data: Bill[] = await response.json();
-      setBills(data);
-    } catch (err: any) {
-      console.error('SummaryPageClient: Error fetching bills (client-side):', err);
-      setError(err.message || 'An unexpected error occurred.');
-    } finally {
-      setLoading(false);
-    }
-  }, [fromDate, toDate, t]);
-
-  const handleApplyFilter = useCallback(() => {
     const currentPath = pathname.replace(`/${locale}`, '');
     const query = new URLSearchParams();
-    if (fromDate && isValid(fromDate)) {
-      query.append('from', format(fromDate, 'yyyy-MM-dd'));
-    }
-    if (toDate && isValid(toDate)) {
-      query.append('to', format(toDate, 'yyyy-MM-dd'));
-    }
+    query.append('from', format(fromDate, 'yyyy-MM-dd'));
+    query.append('to', format(toDate, 'yyyy-MM-dd'));
     
     router.push(`/${locale}${currentPath}?${query.toString()}`);
-  }, [fromDate, toDate, pathname, router, locale]);
+  }, [fromDate, toDate, pathname, router, locale, tGeneral]);
 
   const handleBarClick = useCallback((data: { date: string; fullDate: string; earnings: number }) => {
     const clickedFullDate = data.fullDate;
     const foundSummary = dailySummariesForRange.find(entry => entry.date === clickedFullDate);
     if (foundSummary) {
       setSelectedDailySummaryEntry(foundSummary);
-      // Scroll to the DailyBillSummary component on mobile
       if (isMobile && dailyBillSummaryRef.current) {
         dailyBillSummaryRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -180,7 +144,7 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
       setSelectedDailySummaryEntry(null);
       console.error('No daily summary found for clicked date:', clickedFullDate);
     }
-  }, [dailySummariesForRange, isMobile]); // Added isMobile to dependencies
+  }, [dailySummariesForRange, isMobile]);
 
   const dailyEarningsData = useMemo(() => {
     const chartData = dailySummariesForRange
@@ -188,14 +152,16 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
         const parsedDate = parseISO(entry.date);
         if (!isValid(parsedDate)) {
           console.error('SummaryPageClient: Invalid date encountered:', entry.date);
+          return null;
         }
-        const formattedDate = isValid(parsedDate) ? format(parsedDate, 'MMM dd', { locale: dateFnsLocale }) : 'Invalid Date';
+        const formattedDate = format(parsedDate, 'MMM dd', { locale: dateFnsLocale });
         return {
           date: formattedDate,
           fullDate: entry.date,
           earnings: entry.summary.dayTotalEarnings,
         };
       })
+      .filter(Boolean)
       .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
     return chartData;
   }, [dailySummariesForRange, dateFnsLocale]);
@@ -219,10 +185,6 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
     return data;
   }, [bills, tMealType]);
 
-  const totalEarnings = useMemo(() => {
-    return dailySummariesForRange.reduce((sum, entry) => sum + entry.summary.dayTotalEarnings, 0);
-  }, [dailySummariesForRange]);
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -235,29 +197,30 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
         </Alert>
       )}
 
-      {/* Filter controls */}
       <Grid container spacing={3} alignItems="center" sx={{ mb: 4 }}>
-        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
+        <Grid item xs={12} sm={6} md={3}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateFnsLocale}>
             <DatePicker
-              label={t('from_date')}
+              label={tGeneral('from_date')}
               value={fromDate}
               onChange={(newValue) => setFromDate(newValue)}
               slotProps={{ textField: { fullWidth: true, variant: 'outlined', size: 'small', sx: { borderRadius: 2 } } }}
+              format="yyyy-MM-dd"
             />
           </LocalizationProvider>
         </Grid>
-        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
+        <Grid item xs={12} sm={6} md={3}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateFnsLocale}>
             <DatePicker
-              label={t('to_date')}
+              label={tGeneral('to_date')}
               value={toDate}
               onChange={(newValue) => setToDate(newValue)}
               slotProps={{ textField: { fullWidth: true, variant: 'outlined', size: 'small', sx: { borderRadius: 2 } } }}
+              format="yyyy-MM-dd"
             />
           </LocalizationProvider>
         </Grid>
-        <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 3' } }}>
+        <Grid item xs={12} sm={6} md={3}>
           <Button
             variant="contained"
             color="primary"
@@ -266,39 +229,30 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
             fullWidth
             sx={{ height: '40px', borderRadius: 2 }}
           >
-            {loading ? <CircularProgress size={24} color="inherit" /> : t('apply_filter')}
+            {loading ? <CircularProgress size={24} color="inherit" /> : tGeneral('apply_filter')}
           </Button>
         </Grid>
       </Grid>
 
-      {/* Total Earnings Card */}
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h5" component="h2" gutterBottom>
             {t('total_earnings')}
           </Typography>
           <Typography variant="h4" color="primary">
-            ¥{totalEarnings.toLocaleString(locale)}
+            ¥{totalEarningsForRange.toLocaleString(locale)}
           </Typography>
         </CardContent>
       </Card>
 
-      {/* Charts Grid Container */}
       <Grid container spacing={4} sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)' }, gap: theme.spacing(4) }}>
-        {/* Bar Chart Grid Item */}
-        <Grid sx={{
-          gridColumn: { xs: 'span 1', md: 'span 1' },
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          height: '400px',
-        }}>
+        <Grid item xs={12} md={6}>
           <Card
             sx={{
               borderRadius: 3,
               boxShadow: 3,
               width: '100%',
-              height: '100%',
+              height: '400px',
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -306,45 +260,44 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" gutterBottom>{t('daily_earnings_chart')}</Typography>
               <Box sx={{ flexGrow: 1, width: '100%', height: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={dailyEarningsData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" style={{ fontSize: '0.75rem' }} />
-                    <YAxis tickFormatter={(value) => `¥${value.toLocaleString(locale)}`} style={{ fontSize: '0.75rem' }} />
-                    <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
-                    <Legend />
-                    <Bar
-                      dataKey="earnings"
-                      name={t('earnings')}
-                      fill="#8884d8"
-                      radius={[10, 10, 0, 0]}
-                      onClick={handleBarClick}
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {dailyEarningsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={dailyEarningsData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" style={{ fontSize: '0.75rem' }} />
+                      <YAxis tickFormatter={(value) => `¥${value.toLocaleString(locale)}`} style={{ fontSize: '0.75rem' }} />
+                      <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
+                      <Legend />
+                      <Bar
+                        dataKey="earnings"
+                        name={t('earnings')}
+                        fill="#8884d8"
+                        radius={[10, 10, 0, 0]}
+                        onClick={handleBarClick}
+                        cursor="pointer"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Typography variant="body2">{t('no_bills_found')}</Typography>
+                  </Box>
+                )}
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Pie Chart Grid Item */}
-        <Grid sx={{
-          gridColumn: { xs: 'span 1', md: 'span 1' },
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          height: '400px',
-        }}>
+        <Grid item xs={12} md={6}>
           <Card
             sx={{
               borderRadius: 3,
               boxShadow: 3,
               width: '100%',
-              height: '100%',
+              height: '400px',
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -352,35 +305,40 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" gutterBottom>{t('meal_type_distribution_chart')}</Typography>
               <Box sx={{ flexGrow: 1, width: '100%', height: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={mealTypeDistributionData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={isMobile ? 80 : 120}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      activeShape={false}
-                    >
-                      {mealTypeDistributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                {mealTypeDistributionData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={mealTypeDistributionData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={isMobile ? 80 : 120}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        activeShape={false}
+                      >
+                        {mealTypeDistributionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `¥${value.toLocaleString(locale)}`} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Typography variant="body2">{t('no_bills_found')}</Typography>
+                  </Box>
+                )}
               </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* DailyBillSummary Section - Attach ref here */}
       {selectedDailySummaryEntry && (
-        <Box ref={dailyBillSummaryRef} sx={{ mt: 4 }}> {/* Attach the ref */}
+        <Box ref={dailyBillSummaryRef} sx={{ mt: 4 }}>
           <DailyBillSummary
             date={selectedDailySummaryEntry.date}
             dailySummary={selectedDailySummaryEntry.summary}
@@ -390,7 +348,6 @@ const SummaryPageClient: React.FC<SummaryPageClientProps> = ({
         </Box>
       )}
 
-      {/* No bills found message */}
       {!loading && !bills.length && (
         <Typography sx={{ mt: 2 }}>
           {t('no_bills_found')}

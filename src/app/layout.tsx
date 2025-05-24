@@ -1,49 +1,43 @@
 // src/app/layout.tsx
-
-import { Inter } from "next/font/google";
-import "./globals.css";
-import type { Metadata } from "next";
-import getRequestConfig from '@/i18n/request';
-import { getLocale } from 'next-intl/server';
-import { AuthProvider } from '@/components/AuthProvider';
-import ThemeProviderWrapper from '@/components/ThemeProviderWrapper';
+import { ReactNode } from 'react';
+import { Inter } from 'next/font/google';
+import { authOptions } from '@/auth';
+import { getServerSession } from 'next-auth';
+import { SessionProvider } from '@/components/SessionProvider';
 import MuiRegistry from '@/components/MuiRegistry';
-import NextIntlClientProviderWrapper from '@/components/NextIntlClientProviderWrapper';
+import ThemeProviderWrapper from '@/components/ThemeProviderWrapper';
+import { AppConfigProvider } from '@/context/AppConfigContext'; // Import AppConfigProvider
+// No need for 'headers' here for config fetching anymore
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: "Earning App",
-  description: "Track daily earnings",
+export const metadata = {
+  title: 'Phulkas Earnings',
+  description: 'Track your daily earnings',
 };
 
 export default async function RootLayout({
   children,
-  params: { locale: rootLocaleParam },
-}: Readonly<{
-  children: React.ReactNode;
-  params: { locale: string };
-}>) {
+}: {
+  children: ReactNode;
+}) {
+  const session = await getServerSession(authOptions);
 
-  const currentRequestLocale = rootLocaleParam || await getLocale();
-  const { locale, messages, timeZone } = await getRequestConfig({ requestLocale: currentRequestLocale });
+  // No longer fetching initialAppConfig directly here.
+  // AppConfigProvider will handle it on the client side after session is ready.
 
   return (
-    <html lang={locale}>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
+    <html lang="en">
       <body className={inter.className}>
-        <AuthProvider>
-          <MuiRegistry>
-            <ThemeProviderWrapper>
-              {/* CRITICAL FIX: Pass the locale prop here */}
-              <NextIntlClientProviderWrapper messages={messages} timeZone={timeZone} locale={locale}>
+        <MuiRegistry>
+          <ThemeProviderWrapper>
+            <SessionProvider session={session}>
+              <AppConfigProvider> {/* No initialConfig prop needed here */}
                 {children}
-              </NextIntlClientProviderWrapper>
-            </ThemeProviderWrapper>
-          </MuiRegistry>
-        </AuthProvider>
+              </AppConfigProvider>
+            </SessionProvider>
+          </ThemeProviderWrapper>
+        </MuiRegistry>
       </body>
     </html>
   );

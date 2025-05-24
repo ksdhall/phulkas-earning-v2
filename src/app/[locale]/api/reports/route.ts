@@ -3,12 +3,11 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth';
 import prisma from '@/lib/prisma';
-import { parseISO, isValid } from 'date-fns';
+import { parseISO, isValid, addDays } from 'date-fns';
 
-// Define the type for the request parameters
 interface RouteParams {
   params: {
-    locale: string; // The locale from the URL path
+    locale: string;
   };
 }
 
@@ -19,9 +18,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // The locale can be accessed from params.locale if needed for filtering/logging
-  const { locale } = params; 
-  // console.log(`API: Fetching reports for locale: ${locale}`); // Optional: for debugging
+  // CRITICAL FIX: Await params before destructuring
+  const { locale } = await params;
 
   const { searchParams } = new URL(request.url);
   const fromParam = searchParams.get('from');
@@ -30,11 +28,10 @@ export async function GET(request: Request, { params }: RouteParams) {
   let fromDate: Date | undefined;
   let toDate: Date | undefined;
 
-  // Robust date parsing
   if (fromParam) {
     const parsed = parseISO(fromParam);
     if (isValid(parsed)) {
-      fromDate = parsed;
+      fromDate = new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0));
     } else {
       console.error(`API: Invalid 'from' date parameter for locale ${locale}: ${fromParam}`);
       return NextResponse.json({ error: 'Invalid "from" date format' }, { status: 400 });
@@ -44,8 +41,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   if (toParam) {
     const parsed = parseISO(toParam);
     if (isValid(parsed)) {
-      // For 'to' date, adjust to include the entire day
-      toDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate() + 1);
+      toDate = new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate() + 1, 0, 0, 0, 0));
     } else {
       console.error(`API: Invalid 'to' date parameter for locale ${locale}: ${toParam}`);
       return NextResponse.json({ error: 'Invalid "to" date format' }, { status: 400 });
@@ -69,14 +65,18 @@ export async function GET(request: Request, { params }: RouteParams) {
       },
     });
 
-    // Ensure amounts are numbers before sending to client
     const safeBills = bills.map(bill => ({
       ...bill,
-      foodAmount: typeof bill.foodAmount === 'string' ? parseFloat(bill.foodAmount) : Number(bill.foodAmount),
-      drinkAmount: typeof bill.drinkAmount === 'string' ? parseFloat(bill.drinkAmount) : Number(bill.drinkAmount),
+      foodAmount: Number(bill.foodAmount),
+      drinkAmount: Number(bill.drinkAmount),
+      mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
+      isOurFood: bill.isOurFood ?? true,
+      numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1,
+      id: bill.id.toString(),
+      comments: bill.comments ?? '',
     }));
 
-    return NextResponse.json({ bills: safeBills });
+    return NextResponse.json(safeBills);
   } catch (error) {
     console.error(`API Error fetching bills for locale ${locale}:`, error);
     return NextResponse.json({ error: 'Failed to fetch bills' }, { status: 500 });

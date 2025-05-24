@@ -15,7 +15,8 @@
     "dashboard_link": "ダッシュボード",
     "summary_link": "概要",
     "purchases_link": "仕入れ",
-    "sign_out_button": "サインアウト"
+    "sign_out_button": "サインアウト",
+    "config_link": "設定"
   },
   "language_switcher": {
     "label": "言語",
@@ -44,7 +45,8 @@
     "num_people_working_label": "人数（夕食）",
     "no_lunch_entries": "昼食のエントリはありません",
     "no_dinner_entries": "夕食のエントリはありません",
-    "all_bills_in_range": "範囲内のすべての請求書"
+    "all_bills_in_range": "範囲内のすべての請求書",
+    "no_data_available": "データがありません。"
   },
   "date_range_filter": {
     "from_date": "開始日",
@@ -76,7 +78,7 @@
     "meal_type_label": "食事の種類",
     "food_amount_label": "食事代",
     "drink_amount_label": "飲み物代",
-    "is_our_food_label": "お店の食事？",
+    "is_our_food_label": "お店の食事ですか？",
     "num_people_working_label": "夕食の人数",
     "greeting": "こんにちは！",
     "welcome_message": "収益ダッシュボードへようこそ。"
@@ -126,7 +128,10 @@
     "date_range_order": "開始日は終了日より前にする必要があります。",
     "bill_not_found_for_date": "この日付の請求書が見つかりません。",
     "form_validation_failed": "フォームのエラーを修正してください。",
-    "no_purchase_bills_found": "選択した日付範囲の仕入れ請求書は見つかりません。"
+    "no_purchase_bills_found": "選択した日付範囲の仕入れ請求書は見つかりません。",
+    "invalid_number": "有効な数値を入力してください。",
+    "percentage_range": "割合は0から1の間である必要があります（例：50%の場合は0.5）。",
+    "failed_update_config": "設定の更新に失敗しました。"
   },
   "bill_form": {
     "add_title": "新しい請求書を追加",
@@ -159,7 +164,11 @@
     "edit_button": "編集",
     "from_date": "開始日",
     "to_date": "終了日",
-    "bills": "請求書"
+    "bills": "請求書",
+    "not_selected": "選択されていません",
+    "loading": "読み込み中...",
+    "view_details": "詳細を見る",
+    "apply_filter": "フィルターを適用"
   },
   "purchase_bill_form": {
     "add_title": "新しい仕入れ請求書を追加",
@@ -182,5 +191,20 @@
     "description": "説明",
     "comments": "コメント",
     "actions": "操作"
+  },
+  "config_form": {
+    "title": "アプリケーション設定",
+    "lunch_food_base_income_desc": "昼食の食事代基本収入",
+    "lunch_food_overage_share_percent_desc": "昼食の食事代超過分分担率",
+    "lunch_drink_share_percent_desc": "昼食の飲み物代分担率",
+    "dinner_food_our_share_percent_desc": "夕食の食事代（お店の分）分担率",
+    "dinner_food_common_pool_percent_desc": "夕食の食事代（共通プール）分担率",
+    "dinner_drink_common_pool_percent_desc": "夕食の飲み物代（共通プール）分担率",
+    "save_button": "設定を保存",
+    "update_success": "設定が正常に更新されました！",
+    "loading_config": "設定を読み込み中..."
+  },
+  "config_page": {
+    "title": "アプリ設定"
   }
 }

@@ -1,12 +1,14 @@
+// src/components/Layout.tsx
 "use client";
 
-import React, { ReactNode, useCallback } from 'react'; // Added useCallback
+import React, { ReactNode, useCallback } from 'react';
 import { AppBar, Toolbar, Typography, Container, Box, Button, IconButton, useMediaQuery, useTheme } from '@mui/material';
-import Link from 'next/link';
+// CRITICAL FIX: Use Link, useRouter, usePathname from next-intl/navigation for locale awareness
+import { Link, useRouter, usePathname } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { useSession, signOut } from 'next-auth/react';
 import LanguageSwitcher from './LanguageSwitcher';
-import ThemeToggleButton from './ThemeToggleButton';
+import ThemeToggleButton from './ThemeToggleButton'; // Ensure this component exists and is correctly implemented
 import MenuIcon from '@mui/icons-material/Menu';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
@@ -14,7 +16,6 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
-import { useRouter, useParams } from 'next/navigation';
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,17 +27,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isAuthenticated = status === 'authenticated';
 
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // Changed from 'sm' to 'md' for consistency with previous desktop breakpoint
 
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
-  const router = useRouter();
-  const params = useParams();
-  const currentLocale = params.locale as string || 'en';
+  const router = useRouter(); // From next-intl/navigation
+  const currentLocale = usePathname().split('/')[1] || 'en'; // Get locale from pathname, safer than useParams
 
-  const handleDrawerToggle = useCallback(() => { // Using useCallback
+  const handleDrawerToggle = useCallback(() => {
     setMobileOpen((prev) => !prev);
   }, []);
+
+  // Define navigation items
+  const navItems = [
+    { name: t('dashboard_link'), path: '/dashboard' },
+    { name: t('summary_link'), path: '/summary' },
+    { name: t('purchases_link'), path: '/purchases' },
+    { name: t('config_link'), path: '/config' }, // CRITICAL FIX: Added config link
+  ];
 
   const drawer = (
     <Box
@@ -54,21 +62,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <List sx={{ flexGrow: 1 }}>
         {isAuthenticated && (
           <>
-            <ListItem disablePadding>
-              <ListItemButton component={Link} href={`/${currentLocale}/dashboard`}>
-                <ListItemText primary={t('dashboard_link')} />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton component={Link} href={`/${currentLocale}/purchases`}>
-                <ListItemText primary={t('purchases_link')} />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton component={Link} href={`/${currentLocale}/summary`}>
-                <ListItemText primary={t('summary_link')} />
-              </ListItemButton>
-            </ListItem>
+            {navItems.map((item) => ( // Loop through navItems for drawer
+              <ListItem disablePadding key={item.name}>
+                <ListItemButton component={Link} href={item.path}> {/* Use next-intl Link */}
+                  <ListItemText primary={item.name} />
+                </ListItemButton>
+              </ListItem>
+            ))}
             <ListItem disablePadding>
               <ListItemButton onClick={() => signOut({ callbackUrl: `/${currentLocale}` })}>
                 <ListItemText primary={t('sign_out_button')} />
@@ -81,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {isAuthenticated && <Divider sx={{ my: 1 }} />}
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
         <LanguageSwitcher />
-        <ThemeToggleButton />
+        <ThemeToggleButton /> {/* CRITICAL FIX: ThemeToggleButton is back */}
       </Box>
     </Box>
   );
@@ -103,7 +103,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            <Link href={`/${currentLocale}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+            {/* CRITICAL FIX: Use next-intl Link for logo, ensure it's locale-aware */}
+            <Link href="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
               <img
                 src="/phulka.png"
                 alt="Phulkas App Logo"
@@ -120,25 +121,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {!isMobile && isAuthenticated && (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Button color="inherit" component={Link} href={`/${currentLocale}/dashboard`}>
-                {t('dashboard_link')}
-              </Button>
-              <Button color="inherit" component={Link} href={`/${currentLocale}/purchases`}>
-                {t('purchases_link')}
-              </Button>
-              <Button color="inherit" component={Link} href={`/${currentLocale}/summary`}>
-                {t('summary_link')}
-              </Button>
+              {navItems.map((item) => ( // Loop through navItems for desktop
+                <Button
+                  key={item.name}
+                  color="inherit"
+                  component={Link} // Use next-intl Link
+                  href={item.path}
+                >
+                  {item.name}
+                </Button>
+              ))}
               <Button color="inherit" onClick={() => signOut({ callbackUrl: `/${currentLocale}` })}>
                 {t('sign_out_button')}
               </Button>
             </Box>
           )}
 
+          {/* CRITICAL FIX: Ensure LanguageSwitcher and ThemeToggleButton are always visible on desktop */}
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
               <LanguageSwitcher />
-              <ThemeToggleButton />
+              <ThemeToggleButton /> {/* ThemeToggleButton is back */}
             </Box>
           )}
         </Toolbar>
@@ -153,7 +156,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             keepMounted: true,
           }}
           sx={{
-            display: { xs: 'block', sm: 'none' },
+            display: { xs: 'block', md: 'none' }, // Changed from 'sm' to 'md'
             '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240, display: 'flex', flexDirection: 'column' },
           }}
         >

@@ -22,21 +22,35 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme, useMediaQuery } from '@mui/material';
 
-import { format, addDays, subDays } from 'date-fns';
+import { format, addDays, subDays, parseISO, isValid } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useTranslations } from 'next-intl';
 
-import { Bill } from '@/types/Bill'; // Ensure this type is correct and accessible
-import { calculateDailyEarnings } from '@/lib/calculations'; // Ensure this import path is correct
+import { Bill } from '@/types/Bill';
+import { calculateDailyEarnings } from '@/lib/calculations';
+import { useAppConfig } from '@/context/AppConfigContext'; // Import useAppConfig
 
-const DashboardPageClient: React.FC = () => {
+interface DashboardPageClientProps {
+  locale: string;
+  initialBills: Bill[];
+  initialDate?: string;
+  initialError?: string | null;
+}
+
+const DashboardPageClient: React.FC<DashboardPageClientProps> = ({
+  locale,
+  initialBills,
+  initialDate,
+  initialError,
+}) => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const params = useParams();
-  const locale = params.locale as string;
   const pathname = usePathname();
+  const appConfig = useAppConfig(); // CRITICAL: Get app config from context
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(
+    initialDate && isValid(parseISO(initialDate)) ? parseISO(initialDate) : new Date()
+  );
 
   const dateFnsLocale = useMemo(() => {
     return locale === 'ja' ? ja : enUS;
@@ -44,9 +58,9 @@ const DashboardPageClient: React.FC = () => {
 
   const formattedCurrentDate = format(currentDate, 'yyyy-MM-dd', { locale: dateFnsLocale });
 
-  const [billsForDate, setBillsForDate] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [billsForDate, setBillsForDate] = useState<Bill[]>(initialBills);
+  const [loading, setLoading] = useState(false); // This loading is for client-side operations
+  const [error, setError] = useState<string | null>(initialError);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBillId, setEditingBillId] = useState<string | undefined>(undefined);
@@ -54,7 +68,7 @@ const DashboardPageClient: React.FC = () => {
   const [isModalLoading, setIsModalLoading] = useState(false);
 
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
-  const [billToDeleteId, setBillToDeleteId] = useState<number | null>(null);
+  const [billToDeleteId, setBillToDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -67,66 +81,22 @@ const DashboardPageClient: React.FC = () => {
 
   // This is where the summary is calculated from the fetched bills
   const dailySummary = useMemo(() => {
-    return calculateDailyEarnings(billsForDate);
-  }, [billsForDate]);
+    return calculateDailyEarnings(billsForDate, appConfig); // CRITICAL: Pass appConfig
+  }, [billsForDate, appConfig]);
 
-  const fetchBillsForDate = useCallback(async (dateToFetch: Date) => {
-    if (status !== 'authenticated') {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const formattedDateToFetch = format(dateToFetch, 'yyyy-MM-dd');
-
-    try {
-      // Ensure the API endpoint is correct and returns the expected Bill structure
-      const res = await fetch(`/${locale}/api/reports?from=${formattedDateToFetch}&to=${formattedDateToFetch}`);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || tGeneral('errors.failed_fetch'));
-      }
-      const data = await res.json();
-
-      // IMPORTANT: Ensure data.bills is an array and its elements match the Bill type
-      const processedBills: Bill[] = data.bills.map((bill: any) => ({
-        ...bill,
-        // Ensure date is a string in 'yyyy-MM-dd' format
-        date: format(new Date(bill.date), 'yyyy-MM-dd'),
-        // Ensure mealType is correctly typed as 'lunch' or 'dinner'
-        mealType: bill.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
-        // Provide defaults for optional fields if they might be null/undefined from API
-        isOurFood: bill.isOurFood ?? true, // Default to true if not provided
-        numberOfPeopleWorkingDinner: bill.numberOfPeopleWorkingDinner ?? 1, // Default to 1 if not provided
-        comments: bill.comments ?? null,
-      }));
-      setBillsForDate(processedBills);
-
-    } catch (err: any) {
-      console.error("Error fetching bills for date:", err); // Log the error for debugging
-      setError(err.message || tGeneral('errors.failed_fetch'));
-      setBillsForDate([]); // Ensure bills are cleared on error
-    } finally {
-      setLoading(false);
-    }
-  }, [status, locale, tGeneral]);
+  useEffect(() => {
+    setBillsForDate(initialBills);
+    setError(initialError);
+    setCurrentDate(initialDate && isValid(parseISO(initialDate)) ? parseISO(initialDate) : new Date());
+    setDeleteError(null);
+  }, [initialBills, initialError, initialDate]);
 
   useEffect(() => {
     if (status === 'loading') return;
-    if (
-      status === 'unauthenticated' &&
-      pathname !== `/${locale}`
-    ) {
+    if (status === 'unauthenticated' && pathname !== `/${locale}`) {
       router.push(`/${locale}`);
     }
   }, [status, router, locale, pathname]);
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetchBillsForDate(currentDate);
-    }
-  }, [status, locale, currentDate, fetchBillsForDate]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
@@ -140,6 +110,7 @@ const DashboardPageClient: React.FC = () => {
     setInitialBillData(undefined);
     setIsModalOpen(true);
     setIsModalLoading(false);
+    setError(null);
   }, []);
 
   const handleOpenEditModal = useCallback(async (billId: string) => {
@@ -147,6 +118,7 @@ const DashboardPageClient: React.FC = () => {
     setInitialBillData(undefined);
     setIsModalOpen(true);
     setIsModalLoading(true);
+    setError(null);
 
     try {
       const response = await fetch(`/${locale}/api/bills/${billId}`);
@@ -161,11 +133,11 @@ const DashboardPageClient: React.FC = () => {
         mealType: data.mealType.toString().toLowerCase() as 'lunch' | 'dinner',
         isOurFood: data.isOurFood ?? true,
         numberOfPeopleWorkingDinner: data.numberOfPeopleWorkingDinner ?? 1,
-        comments: data.comments ?? null,
+        comments: data.comments ?? '',
       };
       setInitialBillData(formattedData);
     } catch (err: any) {
-      console.error("Error fetching bill for edit:", err); // Log the error
+      console.error("Error fetching bill for edit:", err);
       setError(err.message || tGeneral('errors.failed_fetch'));
       handleCloseModal();
     } finally {
@@ -195,17 +167,17 @@ const DashboardPageClient: React.FC = () => {
       }
 
       handleCloseModal();
-      fetchBillsForDate(currentDate);
+      router.push(`/${locale}/dashboard?date=${formattedCurrentDate}`);
 
     } catch (err: any) {
-      console.error("Error submitting bill form:", err); // Log the error
+      console.error("Error submitting bill form:", err);
       setError(err.message || (currentBillId ? tBillForm('edit_error') : tBillForm('add_error')));
     } finally {
       setIsModalLoading(false);
     }
-  }, [locale, tGeneral, tBillForm, handleCloseModal, fetchBillsForDate, currentDate]);
+  }, [locale, tGeneral, tBillForm, handleCloseModal, formattedCurrentDate, router]);
 
-  const handleOpenConfirmDelete = useCallback((id: number) => {
+  const handleOpenConfirmDelete = useCallback((id: string) => {
     setBillToDeleteId(id);
     setOpenConfirmDelete(true);
     setDeleteError(null);
@@ -218,14 +190,15 @@ const DashboardPageClient: React.FC = () => {
   }, []);
 
   const handleDeleteBill = useCallback(async () => {
-    if (billToDeleteId === null) return;
+    const idToDelete = billToDeleteId;
+    if (!idToDelete) return;
 
     setOpenConfirmDelete(false);
     setIsDeleting(true);
     setDeleteError(null);
 
     try {
-      const res = await fetch(`/${locale}/api/bills/${billToDeleteId}`, {
+      const res = await fetch(`/${locale}/api/bills/${idToDelete}`, {
         method: 'DELETE',
       });
 
@@ -235,23 +208,25 @@ const DashboardPageClient: React.FC = () => {
       }
 
       setBillToDeleteId(null);
-      fetchBillsForDate(currentDate);
+      router.push(`/${locale}/dashboard?date=${formattedCurrentDate}`);
 
     } catch (err: any) {
-      console.error("Error deleting bill:", err); // Log the error
+      console.error("Error deleting bill:", err);
       setDeleteError(err.message || tGeneral('errors.failed_fetch'));
     } finally {
       setIsDeleting(false);
     }
-  }, [billToDeleteId, locale, tGeneral, fetchBillsForDate, currentDate]);
+  }, [billToDeleteId, locale, tGeneral, formattedCurrentDate, router]);
 
   const handlePreviousDay = useCallback(() => {
-    setCurrentDate(prevDate => subDays(prevDate, 1));
-  }, []);
+    const newDate = subDays(currentDate, 1);
+    router.push(`/${locale}/dashboard?date=${format(newDate, 'yyyy-MM-dd')}`);
+  }, [currentDate, locale, router]);
 
   const handleNextDay = useCallback(() => {
-    setCurrentDate(prevDate => addDays(prevDate, 1));
-  }, []);
+    const newDate = addDays(currentDate, 1);
+    router.push(`/${locale}/dashboard?date=${format(newDate, 'yyyy-MM-dd')}`);
+  }, [currentDate, locale, router]);
 
   let content;
 
@@ -364,9 +339,9 @@ const DashboardPageClient: React.FC = () => {
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseConfirmDelete} disabled={isDeleting}>{tGeneral('edit.cancel')}</Button>
+            <Button onClick={handleCloseConfirmDelete} disabled={isDeleting}>{tGeneral('general.cancel')}</Button>
             <Button onClick={handleDeleteBill} color="error" autoFocus disabled={isDeleting}>
-              {isDeleting ? <CircularProgress size={24} /> : tGeneral('edit.delete')}</Button>
+              {isDeleting ? <CircularProgress size={24} /> : tGeneral('general.delete')}</Button>
           </DialogActions>
         </Dialog>
       </>

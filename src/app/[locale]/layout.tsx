@@ -1,22 +1,28 @@
 // src/app/[locale]/layout.tsx
-
+import { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
+import { NextIntlClientProvider } from 'next-intl';
+import { getRequestConfig } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import Layout from '@/components/Layout'; // Assuming this is your main layout component
 
-export default async function LocaleLayout(props: Readonly<{
-  children: React.ReactNode;
-  params: { locale: string };
-}>) {
-  const { children, params } = props;
-  const { locale } = params; // Access locale directly, should be fine here
+export async function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
 
-  const locales = routing.locales;
-  if (!locales.includes(locale as any)) notFound();
+export default async function LocaleLayout(props: {
+  children: ReactNode;
+  params: { locale: string };
+}) {
+  const { locale } = await props.params;
+
+  if (!routing.locales.includes(locale as any)) notFound();
+
+  const { messages } = await getRequestConfig({ locale });
 
   return (
-    <Layout> {/* This should wrap your main content, including the menu/header */}
-      {children}
-    </Layout>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <Layout>{props.children}</Layout>
+    </NextIntlClientProvider>
   );
 }

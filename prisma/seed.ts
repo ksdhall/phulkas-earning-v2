@@ -1,6 +1,7 @@
 // prisma/seed.ts
 import { PrismaClient, MealType } from '@prisma/client';
 import { addDays, subMonths, getDay } from 'date-fns';
+import { AppConfig as DefaultAppConfig } from '../src/config/app'; // Import your default AppConfig (will be removed later)
 
 const prisma = new PrismaClient();
 
@@ -18,9 +19,10 @@ async function main() {
   console.log('Seeding the database with realistic pricing...');
 
   const today = new Date();
-  const startDate = subMonths(today, 1);
+  const startDate = subMonths(today, 1); // Start 1 month ago
 
   const billsData = [];
+  const purchaseBillsData = []; // Array for purchase bills
 
   for (let i = 0; i < 30; i++) {
     const currentDate = addDays(startDate, i);
@@ -90,13 +92,55 @@ async function main() {
         comments: `Dinner service (Our Food: ${isOurFoodDinner ? 'Yes' : 'No'})`,
       });
     }
+
+    // --- Purchase Bill Entries (Add some random purchase bills) ---
+    if (Math.random() < 0.6) { // 60% chance of a purchase bill on any given day
+      const amount = Math.floor(Math.random() * (5000 - 500 + 1)) + 500; // Random amount between 500 and 5000
+      const descriptions = ['Vegetables', 'Groceries', 'Meat', 'Drinks', 'Supplies'];
+      const comments = ['From local market', 'Wholesale purchase', 'Online order', 'Emergency stock'];
+
+      purchaseBillsData.push({
+        date: currentDate,
+        amount: amount,
+        description: descriptions[Math.floor(Math.random() * descriptions.length)],
+        comments: Math.random() < 0.5 ? comments[Math.floor(Math.random() * comments.length)] : null,
+      });
+    }
   }
 
   await prisma.bill.createMany({
     data: billsData,
   });
-
   console.log('Realistic pricing database seeding completed.');
+
+  // Add purchase bills
+  await prisma.purchaseBill.createMany({
+    data: purchaseBillsData,
+  });
+  console.log('Purchase bills seeding completed.');
+
+  // --- Seed AppConfiguration ---
+  console.log('Seeding initial AppConfiguration...');
+
+  // Define the default configuration values based on your AppConfig
+  const configToSeed = [
+    { key: 'LUNCH_FOOD_BASE_INCOME', value: DefaultAppConfig.LUNCH_FOOD_BASE_INCOME, description: 'Base income for lunch food before overage calculation.' },
+    { key: 'LUNCH_FOOD_OVERAGE_SHARE_PERCENT', value: DefaultAppConfig.LUNCH_FOOD_OVERAGE_SHARE_PERCENT, description: 'Percentage of lunch food overage that contributes to earnings.' },
+    { key: 'LUNCH_DRINK_SHARE_PERCENT', value: DefaultAppConfig.LUNCH_DRINK_SHARE_PERCENT, description: 'Percentage of lunch drink amount that contributes to earnings.' },
+    { key: 'DINNER_FOOD_OUR_SHARE_PERCENT', value: DefaultAppConfig.DINNER_FOOD_OUR_SHARE_PERCENT, description: 'Percentage of dinner food earnings when it is "our food".' },
+    { key: 'DINNER_FOOD_COMMON_POOL_PERCENT', value: DefaultAppConfig.DINNER_FOOD_COMMON_POOL_PERCENT, description: 'Percentage of dinner food that goes to the common pool.' },
+    { key: 'DINNER_DRINK_COMMON_POOL_PERCENT', value: DefaultAppConfig.DINNER_DRINK_COMMON_POOL_PERCENT, description: 'Percentage of dinner drink that goes to the common pool.' },
+  ];
+
+  for (const configItem of configToSeed) {
+    await prisma.appConfiguration.upsert({
+      where: { key: configItem.key },
+      update: { value: configItem.value, description: configItem.description },
+      create: { key: configItem.key, value: configItem.value, description: configItem.description },
+    });
+  }
+
+  console.log('AppConfiguration seeding completed.');
 }
 
 main()

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react'; // Removed useState as it's no longer needed for internal dialog
 import {
   Table,
   TableBody,
@@ -18,14 +18,7 @@ import {
   ListItem,
   ListItemText,
   Grid,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Button,
-  CircularProgress,
-  Alert,
+  // Removed Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, CircularProgress, Alert
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, CheckCircle, Close } from '@mui/icons-material';
 import { useTranslations } from 'next-intl';
@@ -35,24 +28,22 @@ import { format, parseISO } from 'date-fns';
 interface BillListProps {
   bills: Bill[];
   onEdit: (billId: string) => void;
-  onDelete: (billId: number) => void;
+  onDelete: (billId: string) => void; // This will now directly trigger the parent's dialog
   showDateColumn?: boolean;
 }
 
 const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateColumn = true }) => {
   const t = useTranslations('bill_list');
   const tMealType = useTranslations('meal_type');
-  const tEdit = useTranslations('edit');
-  const tErrors = useTranslations('errors');
-  const tGeneral = useTranslations('general');
-
+  // Removed tEdit, tErrors, tGeneral as they are no longer needed here for the dialog
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
-  const [billToDeleteId, setBillToDeleteId] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Removed internal state for delete confirmation dialog
+  // const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+  // const [billToDeleteId, setBillToDeleteId] = useState<string | null>(null);
+  // const [isDeleting, setIsDeleting] = useState(false);
+  // const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const formatCurrency = (amount: number | string) => {
     let numericAmount: number;
@@ -68,14 +59,18 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
     return `¥${numericAmount.toLocaleString()}`;
   };
 
-  const handleDeleteClick = (billId: number) => {
-    onDelete(billId);
+  // The handleDeleteClick now directly calls the onDelete prop
+  const handleDeleteClick = (billId: string) => {
+    onDelete(billId); // This will trigger the parent's (DashboardPageClient's) dialog
   };
+
+  // Removed confirmDelete function as it's no longer needed
 
   if (!bills || bills.length === 0) {
     return (
       <Paper elevation={2} sx={{ p: 2, mb: 2, textAlign: 'center', borderRadius: 2 }}>
-        <Typography variant="body1">{tErrors('bill_not_found')}</Typography>
+        <Typography variant="body1">{/* tErrors('bill_not_found') - Removed, parent handles */}</Typography>
+        <Typography variant="body1">No bills found.</Typography> {/* Placeholder if parent doesn't handle */}
       </Paper>
     );
   }
@@ -145,7 +140,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                 <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}>
                   <EditIcon />
                 </IconButton>
-                <IconButton onClick={() => handleDeleteClick(parseInt(bill.id))} color="error" aria-label={t('delete')}>
+                <IconButton onClick={() => handleDeleteClick(bill.id.toString())} color="error" aria-label={t('delete')}>
                   <DeleteIcon />
                 </IconButton>
               </Box>
@@ -195,7 +190,7 @@ const BillList: React.FC<BillListProps> = ({ bills, onEdit, onDelete, showDateCo
                     <IconButton onClick={() => onEdit(bill.id.toString())} color="primary" aria-label={t('edit')}>
                       <EditIcon />
                     </IconButton>
-                    <IconButton onClick={() => handleDeleteClick(parseInt(bill.id))} color="error" aria-label={t('delete')}>
+                    <IconButton onClick={() => handleDeleteClick(bill.id.toString())} color="error" aria-label={t('delete')}>
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>

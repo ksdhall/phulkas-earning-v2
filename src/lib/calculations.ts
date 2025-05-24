@@ -1,5 +1,15 @@
 import { Bill } from '@/types/bill';
-import { AppConfig } from '@/config/app';
+// Removed import AppConfig from '@/config/app';
+// Define AppConfig type locally for calculations.ts to be self-contained
+export interface AppConfig {
+  LUNCH_FOOD_BASE_INCOME: number;
+  LUNCH_FOOD_OVERAGE_SHARE_PERCENT: number;
+  LUNCH_DRINK_SHARE_PERCENT: number;
+  DINNER_FOOD_OUR_SHARE_PERCENT: number;
+  DINNER_FOOD_COMMON_POOL_PERCENT: number;
+  DINNER_DRINK_COMMON_POOL_PERCENT: number;
+}
+
 import { format, isValid, parseISO } from 'date-fns';
 
 export interface MealSummary {
@@ -8,8 +18,8 @@ export interface MealSummary {
   foodEarnings: number;
   drinkEarnings: number;
   phulkasEarnings: number;
-  isOurFood?: boolean;
-  numberOfPeopleWorkingDinner?: number;
+  isOurFood: boolean;
+  numberOfPeopleWorkingDinner: number;
 }
 
 export interface DailySummary {
@@ -24,6 +34,8 @@ const getDefaultMealSummary = (): MealSummary => ({
   foodEarnings: 0,
   drinkEarnings: 0,
   phulkasEarnings: 0,
+  isOurFood: true,
+  numberOfPeopleWorkingDinner: 1,
 });
 
 const getDefaultDailySummary = (): DailySummary => ({
@@ -32,10 +44,11 @@ const getDefaultDailySummary = (): DailySummary => ({
   dayTotalEarnings: 0,
 });
 
-export const calculateLunchMealSummary = (foodAmount: number, drinkAmount: number): MealSummary => {
-  const foodOverage = Math.max(0, foodAmount - AppConfig.LUNCH_FOOD_BASE_INCOME);
-  const foodEarnings = AppConfig.LUNCH_FOOD_BASE_INCOME + (foodOverage * AppConfig.LUNCH_FOOD_OVERAGE_SHARE_PERCENT);
-  const drinkEarnings = drinkAmount * AppConfig.LUNCH_DRINK_SHARE_PERCENT;
+// CRITICAL: Functions now accept AppConfig as an argument
+export const calculateLunchMealSummary = (foodAmount: number, drinkAmount: number, config: AppConfig): MealSummary => {
+  const foodOverage = Math.max(0, foodAmount - config.LUNCH_FOOD_BASE_INCOME);
+  const foodEarnings = config.LUNCH_FOOD_BASE_INCOME + (foodOverage * config.LUNCH_FOOD_OVERAGE_SHARE_PERCENT);
+  const drinkEarnings = drinkAmount * config.LUNCH_DRINK_SHARE_PERCENT;
   const phulkasEarnings = foodEarnings + drinkEarnings;
   return {
     rawFoodTotal: foodAmount,
@@ -43,26 +56,24 @@ export const calculateLunchMealSummary = (foodAmount: number, drinkAmount: numbe
     foodEarnings: foodEarnings,
     drinkEarnings: drinkEarnings,
     phulkasEarnings: phulkasEarnings,
+    isOurFood: true,
+    numberOfPeopleWorkingDinner: 1,
   };
 };
 
-export const calculateDinnerMealSummary = (foodAmount: number, drinkAmount: number, isOurFood: boolean, numberOfPeopleWorkingDinner: number): MealSummary => {
+// CRITICAL: Functions now accept AppConfig as an argument
+export const calculateDinnerMealSummary = (foodAmount: number, drinkAmount: number, isOurFood: boolean, numberOfPeopleWorkingDinner: number, config: AppConfig): MealSummary => {
   const effectiveWorkers = Math.max(1, numberOfPeopleWorkingDinner);
   
   let foodEarnings = 0;
   let drinkEarnings = 0;
 
   if (isOurFood) {
-    // If it's 'our food', we get a direct share of the food amount
-    foodEarnings = foodAmount * AppConfig.DINNER_FOOD_OUR_SHARE_PERCENT;
-    // The drink amount still goes to a common pool and is shared
-    drinkEarnings = (drinkAmount * AppConfig.DINNER_DRINK_COMMON_POOL_PERCENT) / effectiveWorkers;
+    foodEarnings = foodAmount * config.DINNER_FOOD_OUR_SHARE_PERCENT;
+    drinkEarnings = (drinkAmount * config.DINNER_DRINK_COMMON_POOL_PERCENT) / effectiveWorkers;
   } else {
-    // If it's NOT 'our food', both food and drink contribute to the common pool
-    // and our earnings come from our share of that total common pool.
-    // The `foodEarnings` and `drinkEarnings` here represent our share from their respective common pools.
-    foodEarnings = (foodAmount * AppConfig.DINNER_FOOD_COMMON_POOL_PERCENT) / effectiveWorkers;
-    drinkEarnings = (drinkAmount * AppConfig.DINNER_DRINK_COMMON_POOL_PERCENT) / effectiveWorkers;
+    foodEarnings = (foodAmount * config.DINNER_FOOD_COMMON_POOL_PERCENT) / effectiveWorkers;
+    drinkEarnings = (drinkAmount * config.DINNER_DRINK_COMMON_POOL_PERCENT) / effectiveWorkers;
   }
 
   const phulkasEarnings = foodEarnings + drinkEarnings;
@@ -78,7 +89,8 @@ export const calculateDinnerMealSummary = (foodAmount: number, drinkAmount: numb
   };
 };
 
-export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
+// CRITICAL: Functions now accept AppConfig as an argument
+export const calculateDailyEarnings = (bills: Bill[], config: AppConfig): DailySummary => {
   const dailySummary: DailySummary = getDefaultDailySummary();
 
   let totalLunchFoodAmount = 0;
@@ -86,8 +98,8 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
 
   let tempDinnerFoodTotal = 0;
   let tempDinnerDrinkTotal = 0;
-  let tempDinnerIsOurFood: boolean = true; // Default or last encountered
-  let tempDinnerNumWorkers: number = 1; // Default or last encountered
+  let tempDinnerIsOurFood: boolean = true;
+  let tempDinnerNumWorkers: number = 1;
 
   bills.forEach(bill => {
     if (bill.mealType === 'lunch') {
@@ -102,7 +114,7 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
   });
 
   if (totalLunchFoodAmount > 0 || totalLunchDrinkAmount > 0) {
-    const aggregatedLunchSummary = calculateLunchMealSummary(totalLunchFoodAmount, totalLunchDrinkAmount);
+    const aggregatedLunchSummary = calculateLunchMealSummary(totalLunchFoodAmount, totalLunchDrinkAmount, config); // Pass config
     dailySummary.lunch = aggregatedLunchSummary;
   }
 
@@ -111,7 +123,8 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
       tempDinnerFoodTotal,
       tempDinnerDrinkTotal,
       tempDinnerIsOurFood,
-      tempDinnerNumWorkers
+      tempDinnerNumWorkers,
+      config // Pass config
     );
     dailySummary.dinner = aggregatedDinnerSummary;
   }
@@ -120,14 +133,16 @@ export const calculateDailyEarnings = (bills: Bill[]): DailySummary => {
   return dailySummary;
 };
 
-export const calculateRangeSummary = (bills: Bill[]): DailySummary => {
+// CRITICAL: Functions now accept AppConfig as an argument
+export const calculateRangeSummary = (bills: Bill[], config: AppConfig): DailySummary => {
   let totalRawFood = 0;
   let totalRawDrink = 0;
   let totalLunchPhulkasEarnings = 0;
   let totalDinnerPhulkasEarnings = 0;
   let totalOverallPhulkasEarnings = 0;
 
-  const dailySummaries = calculateDailySummariesForRange(bills);
+  // calculateDailySummariesForRange will also need config
+  const dailySummaries = calculateDailySummariesForRange(bills, config); // Pass config
 
   dailySummaries.forEach(dailyEntry => {
     totalRawFood += dailyEntry.summary.lunch.rawFoodTotal + dailyEntry.summary.dinner.rawFoodTotal;
@@ -145,14 +160,18 @@ export const calculateRangeSummary = (bills: Bill[]): DailySummary => {
       rawDrinkTotal: totalRawDrink,
       foodEarnings: 0,
       drinkEarnings: 0,
-      phulkasEarnings: totalLunchPhulkasEarnings
+      phulkasEarnings: totalLunchPhulkasEarnings,
+      isOurFood: true,
+      numberOfPeopleWorkingDinner: 1,
     },
     dinner: {
       rawFoodTotal: 0,
       rawDrinkTotal: 0,
       foodEarnings: 0,
       drinkEarnings: 0,
-      phulkasEarnings: totalDinnerPhulkasEarnings
+      phulkasEarnings: totalDinnerPhulkasEarnings,
+      isOurFood: true,
+      numberOfPeopleWorkingDinner: 1,
     },
     dayTotalEarnings: totalOverallPhulkasEarnings
   };
@@ -160,7 +179,8 @@ export const calculateRangeSummary = (bills: Bill[]): DailySummary => {
   return summaryForRange;
 };
 
-export const calculateDailySummariesForRange = (bills: Bill[]): { date: string; summary: DailySummary }[] => {
+// CRITICAL: Functions now accept AppConfig as an argument
+export const calculateDailySummariesForRange = (bills: Bill[], config: AppConfig): { date: string; summary: DailySummary }[] => {
   const dailyBillsMap: { [key: string]: Bill[] } = {};
 
   bills.forEach(bill => {
@@ -180,7 +200,7 @@ export const calculateDailySummariesForRange = (bills: Bill[]): { date: string; 
     .sort((a, b) => b.localeCompare(a))
     .map(date => {
       const billsForThisDay = dailyBillsMap[date];
-      const dailySummary = calculateDailyEarnings(billsForThisDay);
+      const dailySummary = calculateDailyEarnings(billsForThisDay, config); // Pass config
       return { date, summary: dailySummary };
     });
 };

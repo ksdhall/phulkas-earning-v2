@@ -15,7 +15,8 @@
     "dashboard_link": "Dashboard",
     "summary_link": "Summary",
     "purchases_link": "Purchases",
-    "sign_out_button": "Sign Out"
+    "sign_out_button": "Sign Out",
+    "config_link": "Configuration"
   },
   "language_switcher": {
     "label": "Language",
@@ -44,7 +45,8 @@
     "num_people_working_label": "Number of People Working Dinner",
     "no_lunch_entries": "No Lunch Entries",
     "no_dinner_entries": "No Dinner Entries",
-    "all_bills_in_range": "All Bills in Range"
+    "all_bills_in_range": "All Bills in Range",
+    "no_data_available": "No data available."
   },
   "date_range_filter": {
     "from_date": "From Date",
@@ -126,7 +128,10 @@
     "date_range_order": "From date cannot be after To date.",
     "bill_not_found_for_date": "No bills found for this date.",
     "form_validation_failed": "Please correct the errors in the form.",
-    "no_purchase_bills_found": "No purchase bills found for the selected date range."
+    "no_purchase_bills_found": "No purchase bills found for the selected date range.",
+    "invalid_number": "Please enter a valid number.",
+    "percentage_range": "Percentage must be between 0 and 1 (e.g., 0.5 for 50%).",
+    "failed_update_config": "Failed to update configuration."
   },
   "bill_form": {
     "add_title": "Add New Bill",
@@ -159,7 +164,11 @@
     "edit_button": "Edit",
     "from_date": "From Date",
     "to_date": "To Date",
-    "bills": "bills"
+    "bills": "Bills",
+    "not_selected": "Not Selected",
+    "loading": "Loading...",
+    "view_details": "View Details",
+    "apply_filter": "Apply Filter"
   },
   "purchase_bill_form": {
     "add_title": "Add New Purchase Bill",
@@ -182,5 +191,20 @@
     "description": "Description",
     "comments": "Comments",
     "actions": "Actions"
+  },
+  "config_form": {
+    "title": "Application Configuration",
+    "lunch_food_base_income_desc": "Lunch Food Base Income",
+    "lunch_food_overage_share_percent_desc": "Lunch Food Overage Share Percentage",
+    "lunch_drink_share_percent_desc": "Lunch Drink Share Percentage",
+    "dinner_food_our_share_percent_desc": "Dinner Food (Our Share) Percentage",
+    "dinner_food_common_pool_percent_desc": "Dinner Food (Common Pool) Percentage",
+    "dinner_drink_common_pool_percent_desc": "Dinner Drink (Common Pool) Percentage",
+    "save_button": "Save Configuration",
+    "update_success": "Configuration updated successfully!",
+    "loading_config": "Loading configuration..."
+  },
+  "config_page": {
+    "title": "App Configuration"
   }
 }

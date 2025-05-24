@@ -5,7 +5,6 @@ generator client {
 }
 
 datasource db {
-  // Provider is "sqlite"
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
@@ -17,16 +16,16 @@ enum MealType {
 }
 
 model Bill {
-  id          Int       @id @default(autoincrement())
-  date        DateTime
-  foodAmount  Float
-  drinkAmount Float
-  mealType    MealType @default(LUNCH)
-  isOurFood   Boolean?  @default(true)
-  numberOfPeopleWorkingDinner Int? @default(1)
-  comments    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                        Int      @id @default(autoincrement())
+  date                      DateTime
+  foodAmount                Float
+  drinkAmount               Float
+  mealType                  MealType @default(LUNCH)
+  isOurFood                 Boolean? @default(true)
+  numberOfPeopleWorkingDinner Int?   @default(1)
+  comments                  String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   @@index([date]) // Add an index on the date field for faster querying
 }
@@ -54,7 +53,6 @@ model Account {
   expires_at        Int?
   token_type        String?
   scope             String?
-  // Removed @db.Text as it's not supported by SQLite
   id_token          String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -78,6 +76,15 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// RESTORED: AppConfiguration Model for persistent settings
+model AppConfiguration {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       Float
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 
 model PurchaseBill {
   id          Int      @id @default(autoincrement())
